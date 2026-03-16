@@ -5,3 +5,9 @@ out/
 .env
 .env.local
 .DS_Store
+.wrangler/
+.claude/
+video/
+*.tsbuildinfo
+__pycache__/
+*.txt

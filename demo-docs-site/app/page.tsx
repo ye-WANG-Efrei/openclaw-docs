@@ -31,7 +31,14 @@ export default function HomePage() {
           </div>
         </Link>
         <div className="topbar-actions">
-          <Link className="ghost-link" href={buildLanguageHref("/docs", language)}>
+          <Link
+            className="ghost-link"
+            href={
+              featuredGuide
+                ? buildLanguageHref(`/docs/${featuredGuide.slug}`, language)
+                : buildLanguageHref("/docs", language)
+            }
+          >
             {labels.startReading}
           </Link>
           <LanguageSwitcher currentLanguage={language} pathname="/" />
