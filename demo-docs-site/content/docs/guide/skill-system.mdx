@@ -1,0 +1,238 @@
+---
+title: The Skill System
+description: What a Skill is, two installation methods, and how to create your own Skill with AI assistance.
+order: 4
+---
+
+## What is a Skill
+
+A Skill is OpenClaw's pluggable capability module. At its core, it is simply a folder containing a `SKILL.md` file that tells the Agent "when to trigger, how to execute, and which scripts and references it depends on."
+
+```text
+my-skill/
+├── SKILL.md          ← Core: trigger conditions + execution flow
+├── agents/           ← Optional: configuration for different models
+├── scripts/          ← Optional: automation scripts
+├── references/       ← Optional: reference materials
+└── assets/           ← Optional: static assets
+```
+
+**Minimal `SKILL.md` format:**
+
+```markdown
+---
+name: skill-name
+description: What this Skill does
+---
+
+# Execution Instructions
+
+When the user makes a XXX request, execute the following steps...
+```
+
+### Skill Loading Priority
+
+OpenClaw searches for Skills in the following order — higher entries take precedence:
+
+| Priority | Path | Description |
+| --- | --- | --- |
+| 1 (highest) | `<workspace>/skills/` | Project-specific Skills |
+| 2 | `~/.openclaw/skills/` | Globally shared (visible to all Agents) |
+| 3 (lowest) | Built-in package | Bundled with OpenClaw |
+
+When the same Skill name exists in multiple locations, the higher-priority version wins.
+
+### Token Cost
+
+Each enabled Skill consumes approximately **24 tokens + field length**. Enable Skills on an as-needed basis to keep costs in check.
+
+---
+
+## Installation Method 1: Pull from Online
+
+### The ClawHub Marketplace
+
+[ClawHub](https://clawhub.ai) is the official Skill marketplace — similar to npm, with versioning and search support.
+
+```bash
+# Install a specific Skill
+npx clawhub@latest install <skill-slug>
+
+# Or use the globally installed clawhub CLI
+clawhub install baoyu-image-gen
+clawhub install <skill-slug> --version 1.2.3
+```
+
+After installation, Skills are placed by default in the `./skills/` folder of the current directory.
+
+```bash
+# View installed Skills
+clawhub list
+
+# Update a single Skill
+clawhub update baoyu-image-gen
+
+# Update all Skills
+clawhub update --all
+```
+
+### Install from a GitHub Repository
+
+You can also clone a Skill repository directly from GitHub, for example:
+
+```bash
+# Reference repository: baoyu's Skill collection
+git clone https://github.com/JimLiu/baoyu-skills
+```
+
+After cloning, copy the relevant Skill folder into your `~/.openclaw/skills/` or project's `workspace/skills/` directory, then restart the Gateway for it to take effect.
+
+```bash
+cp -r baoyu-skills/image-gen ~/.openclaw/skills/
+openclaw gateway restart
+```
+
+---
+
+## Installation Method 2: Build Locally (with AI Assistance)
+
+The core idea here is:
+
+> Describe your requirements to ChatGPT / Claude, have it generate the `SKILL.md` content, then use the `/skillscreate` command inside OpenClaw to create and deploy it directly.
+
+### Step 1: Use ChatGPT to Generate SKILL.md Content
+
+Describe your requirements to ChatGPT. Example prompt:
+
+```
+I'm using OpenClaw and need a Skill that:
+Automatically generates a documentation site, including a Next.js template, sidebar navigation, and MDX content pages.
+Please write a SKILL.md for me in AgentSkills format, including frontmatter, execution flow, and important notes.
+```
+
+### Step 2: Use /skillscreate to Create the Skill
+
+In Claude Code / OpenClaw, use the built-in `skillscreate` command:
+
+```bash
+/skillscreate
+```
+
+Or tell the Agent directly:
+
+```
+Help me create a new Skill called my-weather-skill.
+Its function is: when the user asks about the weather, call the weather API and return the result.
+```
+
+The Agent will automatically create the complete Skill folder under `~/.openclaw/skills/`.
+
+### Step 3: Verify the Skill is Loaded
+
+```bash
+# Restart the Gateway to activate the new Skill
+openclaw gateway restart
+
+# Test it
+openclaw agent --message "Test my new skill"
+```
+
+---
+
+## A Real Example: openclaw-docsite-generator
+
+This documentation site itself was generated using a custom Skill called `openclaw-docsite-generator`.
+
+**Skill description:**
+
+> Generate a complete OpenClaw documentation site with a Next.js architecture, structured MDX content, sidebar navigation, and reusable templates. Supports creating new sites, expanding sections, and syncing navigation.
+
+**Directory structure:**
+
+```text
+openclaw-docsite-generator/
+├── SKILL.md
+├── agents/
+│   └── openai.yaml
+├── scripts/
+│   └── manage_docsite.py
+├── references/
+│   ├── docsite-blueprint.md
+│   └── page-templates.md
+└── assets/
+    └── next-docsite-template/
+```
+
+**How to trigger it (say this directly in an Agent conversation):**
+
+```
+Use $openclaw-docsite-generator to generate an OpenClaw documentation site
+```
+
+**SKILL.md frontmatter snippet:**
+
+```yaml
+---
+name: openclaw-docsite-generator
+description: Generate, expand, and maintain complete OpenClaw documentation websites
+  with a Next.js-style docs architecture, structured markdown or MDX content,
+  sidebar navigation, and reusable templates.
+---
+```
+
+**Operations supported by `manage_docsite.py`:**
+
+```bash
+# Scaffold a complete documentation site
+python scripts/manage_docsite.py scaffold --output <target-directory>
+
+# Add a new section
+python scripts/manage_docsite.py add-section \
+  --site <target-directory> \
+  --section-id operations \
+  --title "Operations"
+
+# Add a new page
+python scripts/manage_docsite.py add-page \
+  --site <target-directory> \
+  --section advanced \
+  --slug gateway-observability \
+  --title "Gateway Observability"
+
+# Sync navigation
+python scripts/manage_docsite.py sync-nav --site <target-directory>
+```
+
+---
+
+## Managing Skills in openclaw.json
+
+```json
+{
+  "skills": {
+    "entries": {
+      "my-skill": {
+        "enabled": true,
+        "env": {
+          "API_KEY": "your-key"
+        }
+      },
+      "old-skill": {
+        "enabled": false
+      }
+    }
+  }
+}
+```
+
+`enabled: false` lets you temporarily disable a Skill without deleting the files.
+
+---
+
+## Security Notes
+
+- Third-party Skills are essentially third-party code — always read through `SKILL.md` and the `scripts/` directory before installing
+- Check whether the Skill requests unnecessary tool permissions (file writes, network access, script execution)
+- Keys injected via `env` or `apiKey` are kept in the main process only — never print them out in a prompt
+
+

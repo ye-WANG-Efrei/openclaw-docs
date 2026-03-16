@@ -1,0 +1,423 @@
+---
+title: OpenClaw Beginner Guide
+description: Build a complete beginner mental model in one chapter, from installation and workspace structure to skills, safety, and next resources.
+order: 1
+---
+
+## Who This Chapter Is For
+
+If this is your first time seeing OpenClaw, the hardest part is usually not a single command. The hard part is figuring out whether it is a chatbot, a gateway, or a full agent runtime. This chapter is meant to solve that first. It gives you the full picture, then shows you the first path that actually gets the system running.
+
+By the end of this guide, you should be able to answer these questions:
+
+- What OpenClaw actually is and how it differs from a normal chat bot
+- Why `Gateway`, `Workspace`, and `openclaw.json` show up everywhere
+- What a beginner should verify first after installation
+- Where model strategy, skills, token control, and security sit in the larger system
+
+## What OpenClaw Is
+
+A useful first definition is this: OpenClaw is a personal AI assistant gateway that runs on your own machine. It is not only a model wrapper, and it is not only a message relay bot. It is the runtime layer that connects channels, agents, models, tools, skills, and long-lived context.
+
+For a brand-new user, three ideas matter most:
+
+- the center of the product is not one chat window but a persistent control plane
+- the system is designed around personal workflows, local control, durable memory, and extensibility
+- channels, web entry points, CLI access, and browser control can all be attached to the same assistant runtime
+
+## OpenClaw In One Diagram
+
+```text
+Telegram / Discord / Slack / WebChat / CLI / Browser
+                         │
+                         ▼
+┌──────────────────────────────────────────┐
+│              OpenClaw Gateway            │
+│   manages connections, routing, agents   │
+└──────────────────────┬───────────────────┘
+                       │
+         ┌─────────────┼─────────────┐
+         ▼             ▼             ▼
+      Agents         Tools         Skills
+         │             │             │
+         └─────────────┴──────┬──────┘
+                              ▼
+                            Memory
+```
+
+If you only keep one sentence in mind, make it this: **you are not just talking to a model, you are interacting with an agent system that has state, tools, workspace context, and policy.**
+
+## The Three Objects A Beginner Should Learn First
+
+| Core object | Practical meaning | Why beginners should learn it first |
+| --- | --- | --- |
+| `Gateway` | the central runtime entry point | it starts the system, accepts connections, integrates channels, and coordinates agents |
+| `Workspace` | the directory where the assistant actually operates | it stores context, memory, skills, and operating instructions |
+| `openclaw.json` | the main configuration file | it defines defaults for models, channels, session behavior, and workspace location |
+
+Most advanced topics are really just deeper versions of these three ideas.
+
+## Before You Install
+
+Before you start, confirm the basics:
+
+- use a current Node.js release, with `Node.js 22+` as the beginner recommendation from the reference guide
+- have a package manager available such as `npm`, `pnpm`, or `bun`
+- make sure your machine can reach the model provider or proxy you plan to use
+- if you want external chat channels later, prepare the corresponding developer credentials
+
+If your only goal right now is to get OpenClaw running, do not start with Feishu, Telegram, or Cloudflare. First get the local gateway working. Then add external entry points one layer at a time.
+
+## Install OpenClaw
+
+The reference guide uses a CLI-first path, where you install the command-line tool and then run onboarding.
+
+```bash
+curl -fsSL https://openclaw.ai/install.sh | bash
+```
+
+On Windows PowerShell, a similar path looks like this:
+
+```powershell
+iwr https://openclaw.ai/install.ps1 -useb | iex
+```
+
+If you already prefer a Node-based workflow, you can install through a package manager:
+
+```bash
+npm install -g @openclaw/cli
+```
+
+> The exact installation path may change with releases. In real usage, always confirm against the current official installation instructions.
+
+## Run The Onboarding Flow Once
+
+After the CLI is installed, it is usually better to go through the onboarding path than to handcraft every file from scratch.
+
+```bash
+openclaw onboard --install-daemon
+openclaw onboard
+```
+
+The main value here is not saving keystrokes. It is making sure the base directory structure, service mode, and minimum required configuration are all in a sane state.
+
+## The First Three Checks After Installation
+
+### 1. Check whether Gateway is healthy
+
+```bash
+openclaw gateway status
+```
+
+### 2. Start it if it is not already running
+
+```bash
+openclaw gateway start
+```
+
+### 3. Open the dashboard or web surface
+
+```bash
+openclaw dashboard
+```
+
+At this point you should be able to confirm three things:
+
+- the CLI command works
+- Gateway can run
+- you have a visual surface where you can inspect the system
+
+## A 5-Minute Quick Start
+
+If you want the shortest confidence-building path, use this sequence:
+
+### Step 1. Start Gateway
+
+```bash
+openclaw gateway start
+```
+
+### Step 2. Open the dashboard
+
+```bash
+openclaw dashboard
+```
+
+### Step 3. Send one test message
+
+If you already connected a chat channel, send a test message there. If you have not connected one yet, use the local web surface or CLI for the first interaction.
+
+### Step 4. Talk to an agent directly
+
+```bash
+openclaw talk
+```
+
+Do not rush into multi-model routing or complex automation yet. At the beginner stage, the main job is proving that the whole path from entry point to model call is working.
+
+## What Workspace Means
+
+Workspace is the durable context directory for OpenClaw. This is where the assistant reads operating rules, user preferences, long-term memory, and installed skills.
+
+A typical `~/.openclaw/` layout looks like this:
+
+```text
+~/.openclaw/
+├── openclaw.json
+├── workspace/
+│   ├── AGENTS.md
+│   ├── SOUL.md
+│   ├── TOOLS.md
+│   ├── IDENTITY.md
+│   ├── USER.md
+│   ├── MEMORY.md
+│   └── skills/
+├── agents/
+├── skills/
+└── credentials/
+```
+
+These are the first files worth understanding:
+
+| File | Purpose | When beginners usually edit it |
+| --- | --- | --- |
+| `AGENTS.md` | operating instructions, continuity rules, key constraints | when you want the agent to behave more predictably |
+| `SOUL.md` | tone, personality, boundaries | when you want to shape voice and style |
+| `TOOLS.md` | tool-use rules | when you need to constrain tools or document environment limits |
+| `USER.md` | user context and preferences | when you want the assistant to understand your situation better |
+| `MEMORY.md` | long-term memory | when you want the system to carry information forward reliably |
+
+Once Workspace clicks, OpenClaw starts to make more sense: the product is about a structured operating directory, not just an endless chat log.
+
+## What `openclaw.json` Does
+
+`~/.openclaw/openclaw.json` is the central configuration file. It decides which workspace the default agent uses, which model it prefers, how sessions are grouped, which channels are enabled, and who is allowed to talk to the system.
+
+Many setups use a JSON5-like configuration style because it is easier to maintain by hand than strict JSON.
+
+### Minimal Working Config
+
+```json
+{
+  "agents": {
+    "defaults": {
+      "workspace": "~/.openclaw/workspace"
+    }
+  },
+  "channels": {
+    "telegram": {
+      "enabled": true,
+      "botToken": "123456:ABC...",
+      "dmPolicy": "pairing",
+      "allowFrom": ["tg:123456789"]
+    }
+  }
+}
+```
+
+This minimal example makes three decisions explicit:
+
+- where the default agent reads its workspace from
+- which external entry point is enabled
+- which DM safety policy is in effect
+
+### A More Useful Default Agent Example
+
+```json
+{
+  "agents": {
+    "defaults": {
+      "workspace": "~/.openclaw/workspace",
+      "model": {
+        "primary": "anthropic/claude-sonnet-4-5",
+        "fallbacks": ["openai/gpt-5.2"]
+      },
+      "heartbeat": {
+        "every": "30m",
+        "target": "last"
+      }
+    }
+  }
+}
+```
+
+The main things to notice are:
+
+- `workspace` points to the long-lived context and skill source
+- `model.primary` defines the default model path
+- `fallbacks` give you a recovery route
+- `heartbeat` lets the system check, continue, or revisit tasks on a schedule
+
+### Session Management Example
+
+```json
+{
+  "session": {
+    "dmScope": "per-channel-peer",
+    "reset": {
+      "mode": "daily",
+      "atHour": 4,
+      "idleMinutes": 120
+    }
+  }
+}
+```
+
+New users often focus only on model choice. In practice, session policy matters almost as much, because it defines which messages stay together, when context resets, and how quickly token cost can grow.
+
+## How Channels Fit Into The System
+
+One of OpenClaw's biggest strengths is that it can route multiple entry points into the same agent runtime. Common examples are Telegram, Discord, Slack, and WebChat, with browser-driven or automated entry points added later.
+
+For beginners, remember two rules:
+
+- a channel is just an entry point, not the system itself
+- channel setup and security policy should always be configured together
+
+### Common DM Policies
+
+| Policy | Best for | Tradeoff |
+| --- | --- | --- |
+| `open` | disposable test environments | easiest to use, highest risk |
+| `allowlist` | known small-user setups | strong control, but someone has to maintain the list |
+| `pairing` | personal use or small trusted rollouts | good balance between convenience and control |
+
+### Telegram Example
+
+```json
+{
+  "channels": {
+    "telegram": {
+      "enabled": true,
+      "botToken": "123456:ABC...",
+      "dmPolicy": "pairing",
+      "allowFrom": ["tg:123456789"]
+    }
+  }
+}
+```
+
+If you later want Feishu, Cloudflare Tunnel, or public callback flows, that belongs in the installation and deployment chapter. For this guide, it is enough to understand what channels are and why their policy matters.
+
+## Should You Use Multiple Agents On Day One
+
+You can, but it is usually better not to. The cleaner beginner sequence is:
+
+1. start with one main agent and make the basic runtime stable
+2. split roles only when the task shape really demands it, such as research, coding, execution, or review
+3. add routing and more advanced coordination after the single-agent path is reliable
+
+A simplified multi-agent configuration might look like this:
+
+```json
+{
+  "agents": {
+    "researcher": {
+      "workspace": "~/.openclaw/agents/researcher",
+      "model": { "primary": "openai/gpt-5.2" }
+    },
+    "coder": {
+      "workspace": "~/.openclaw/agents/coder",
+      "model": { "primary": "anthropic/claude-sonnet-4-5" }
+    }
+  }
+}
+```
+
+## How To Think About Skills As A Beginner
+
+A skill is a reusable method bundle: local instructions, assets, templates, and supporting logic that package one workflow into something installable and maintainable. It is more than a prompt fragment, and more durable than a one-off chat command.
+
+At the beginner stage, you do not need to author skills immediately. You do need to understand two things:
+
+- you can install existing skills that other people already packaged
+- later, you can generate your own skills with tools like ChatGPT, Codex, Claude, or a skill generator workflow like the one we are using here
+
+### One Common Path For Installing Existing Skills
+
+```bash
+npm install -g clawhub
+clawhub search openclaw
+clawhub install <skill-name>
+```
+
+### Useful Skill Management Commands
+
+```bash
+clawhub list
+clawhub update
+clawhub remove <skill-name>
+```
+
+### Beginner-Friendly Skill Categories
+
+- documentation generation and maintenance
+- web research and synthesis
+- code review and patch generation
+- multi-step automation workflows
+- local knowledge retrieval and indexing
+
+The dedicated skill chapter can go deeper later. Here the goal is just to make the concept feel grounded.
+
+## Handy CLI Commands
+
+```bash
+openclaw gateway status
+openclaw gateway start
+openclaw gateway stop
+openclaw gateway restart
+openclaw dashboard
+openclaw talk
+openclaw doctor
+```
+
+For most beginners, these cover the first practical loop: inspect status, start, restart, open a surface, talk directly, and diagnose problems.
+
+## Safe Defaults: What Beginners Usually Miss
+
+OpenClaw is powerful because it can call models, expose channels, use tools, and read structured context. That also means safety cannot be treated as an afterthought.
+
+These are the most common beginner mistakes:
+
+- exposing a bot to the public internet before adding access controls
+- storing API keys in shared docs or repositories
+- enabling channels without `allowlist` or `pairing`
+- granting tools broad permissions without clear execution boundaries
+
+A safer baseline looks like this:
+
+- start with minimum permissions
+- keep the first setup local when possible
+- use allowlists or pairing before opening access widely
+- keep secrets in dedicated credential storage, not inside random markdown files or scripts
+
+## Common Troubleshooting Checks
+
+| Symptom | Check first | Common cause |
+| --- | --- | --- |
+| `openclaw` command not found | whether the CLI was installed into the current environment | PATH mismatch or a different runtime environment |
+| Gateway fails to start | `openclaw gateway status` and `openclaw doctor` | port conflict, config issue, missing dependency |
+| a channel receives nothing | token, callback path, and access policy | wrong token, broken webhook, missing allowlist or pairing |
+| model calls fail | provider config, API key, proxy availability | invalid key, routing issue, exhausted account limits |
+| responses become noisy and expensive | `session`, `heartbeat`, and context size | unconstrained sessions, oversized context, no compression or reset policy |
+
+## Where To Go Next
+
+Once your first environment is working, the most useful next resources are:
+
+- the official docs for installation, model strategy, skills, and security
+- the project repository for current commands, configuration formats, and release notes
+- community discussions for real channel integrations and operations patterns
+- skill registries or repositories so you can reuse capability modules instead of rebuilding everything from scratch
+
+## The Five Things To Remember From This Chapter
+
+If you only remember five points, keep these:
+
+1. OpenClaw is not a single chat bot. It is a personal AI assistant runtime system.
+2. `Gateway`, `Workspace`, and `openclaw.json` are the three beginner concepts that unlock the rest.
+3. Get the local minimum path working before you add more channels, more agents, or more automation.
+4. Skills, model strategy, token optimization, and security all matter, but they work best after the base runtime is stable.
+5. In long-term use, configuration discipline and safety boundaries matter almost as much as the model itself.
+
+The natural next step after this chapter is installation and deployment, where the local runtime, provider setup, and advanced entry paths such as Feishu plus Cloudflare Tunnel can be wired up for real.

@@ -1,0 +1,58 @@
+{
+  "site": {
+    "title": "OpenClaw 文档",
+    "description": "面向个人开发者的 AI 助手本地部署与工程化实践指南。",
+    "tagline": "安装、模型、Skill、Token 优化与安全"
+  },
+  "sections": [
+    {
+      "id": "guide",
+      "title": "",
+      "description": "",
+      "items": [
+        {
+          "title": "OpenClaw 是什么",
+          "slug": "guide/openclaw-quick-understanding",
+          "description": "快速理解 OpenClaw 的核心概念、Gateway 运行原理与整体架构设计。",
+          "order": 1
+        },
+        {
+          "title": "安装和部署",
+          "slug": "guide/installation-and-deployment",
+          "description": "从环境准备到 Gateway 启动，完成 OpenClaw 的完整本地部署与初始配置。",
+          "order": 2
+        },
+        {
+          "title": "模型选择",
+          "slug": "guide/model-selection",
+          "description": "根据任务类型和成本需求，选择合适的 AI 模型与提供商，配置路由策略。",
+          "order": 3
+        },
+        {
+          "title": "Skill 体系",
+          "slug": "guide/skill-system",
+          "description": "了解 Skill 的安装、创建与使用方式，扩展 Agent 的能力边界。",
+          "order": 4
+        },
+        {
+          "title": "Token 优化",
+          "slug": "guide/token-optimization",
+          "description": "用 QMD 检索、本地模型和订阅计费系统性降低 OpenClaw 运行成本。",
+          "order": 5
+        },
+        {
+          "title": "安全问题",
+          "slug": "guide/security",
+          "description": "通讯渠道授权、密钥管理与沙盒执行，构建本地优先的安全防护体系。",
+          "order": 6
+        },
+        {
+          "title": "Harness Engineering",
+          "slug": "guide/harness-engineering",
+          "description": "将 OpenClaw 工程化落地，构建可持续迭代、稳定运行的 AI 助手体系。",
+          "order": 7
+        }
+      ]
+    }
+  ]
+}

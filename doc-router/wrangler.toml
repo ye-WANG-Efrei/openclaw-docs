@@ -1,0 +1,8 @@
+name = "openclaw-doc-router"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+account_id = "652120b1b0b9a5755d31e219d1b6c851"
+
+routes = [
+  { pattern = "openclaw.aiedi.cn/doc*", zone_name = "aiedi.cn" }
+]

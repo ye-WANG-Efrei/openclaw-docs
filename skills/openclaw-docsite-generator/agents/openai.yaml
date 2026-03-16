@@ -1,0 +1,4 @@
+interface:
+  display_name: "OpenClaw Docs Generator"
+  short_description: "Build and maintain OpenClaw docs"
+  default_prompt: "Use $openclaw-docsite-generator to scaffold or update an OpenClaw documentation website."

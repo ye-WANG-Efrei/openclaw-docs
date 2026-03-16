@@ -1,0 +1,240 @@
+﻿---
+title: Installation and Deployment
+description: Go from the basic openclaw install path to a more advanced Feishu + Cloudflare Tunnel deployment pattern.
+order: 2
+---
+
+## Basic Installation: Get OpenClaw Running First
+
+This section is based on the beginner OpenClaw guide you shared. The goal is to get to the shortest working path first.
+
+### System Requirements
+
+| Requirement | Value | Why it matters |
+| --- | --- | --- |
+| Node.js | 22 or newer | Required |
+| OS | macOS, Linux, Windows (WSL2) | Recommended support surface |
+| Package manager | npm, pnpm, or bun | Any one is fine |
+
+### Install Paths
+
+#### macOS / Linux
+
+```bash
+curl -fsSL https://openclaw.ai/install.sh | bash
+```
+
+#### Windows PowerShell
+
+```powershell
+iwr -useb https://openclaw.ai/install.ps1 | iex
+```
+
+#### Install the CLI with npm / pnpm
+
+```bash
+npm install -g openclaw@latest
+
+# or
+pnpm add -g openclaw@latest
+```
+
+### Run the Onboarding Flow
+
+```bash
+openclaw onboard --install-daemon
+
+# or run only the config wizard
+openclaw onboard
+```
+
+### Basic Verification
+
+```bash
+openclaw gateway status
+openclaw dashboard
+```
+
+To run the Gateway in the foreground for debugging:
+
+```bash
+openclaw gateway --port 18789 --verbose
+```
+
+To run it as a background daemon:
+
+```bash
+openclaw gateway start
+```
+
+## Basic Deployment: First End-to-End Check
+
+After installation, verify at least these three things:
+
+1. `openclaw gateway status` shows a healthy Gateway.
+2. `openclaw dashboard` or the control panel opens correctly.
+3. You can start an agent interaction from CLI.
+
+For example:
+
+```bash
+openclaw agent --message "Summarize today’s meeting" --thinking high
+```
+
+## Advanced Configuration: Feishu + Cloudflare + openclaw
+
+This section is based on your local `Setup.md` and should be treated as a practical deployment pattern rather than the only possible OpenClaw setup.
+
+There is one naming detail worth keeping in mind:
+
+- some local materials use the product name `ClawBot`
+- the CLI and configuration commands still use `openclaw`
+
+### 1. Create a Feishu App
+
+In the Feishu developer platform, create a self-built app and complete these steps:
+
+- add the Bot capability
+- enable the required message permissions
+- record the `App ID` and `App Secret`
+- create and publish the first version
+
+Recommended permission candidates include:
+
+- `im:message`
+- `im:message.p2p_msg`
+- `im:message.group_at_msg`
+- `im:message.group_msg`
+- `im:chat`
+
+### 2. Install and Configure the Feishu Plugin
+
+```powershell
+openclaw plugins install @miheng-clawd/feishu
+```
+
+Set the credentials:
+
+```powershell
+openclaw config set channels.feishu.appid "<YOUR_APP_ID>"
+openclaw config set channels.feishu.appSecret "<YOUR_APP_SECRET>"
+```
+
+If you need to add the channel explicitly:
+
+```powershell
+openclaw channels capabilities
+openclaw channels add --channel feishu
+openclaw channels list
+```
+
+### 3. Start Gateway and Verify the Local Webhook
+
+```powershell
+openclaw gateway restart
+openclaw gateway status
+```
+
+If Gateway does not start correctly, switch to local mode:
+
+```powershell
+openclaw config set gateway.mode "local"
+openclaw gateway restart
+openclaw gateway status
+```
+
+The Feishu webhook path is usually:
+
+```text
+/feishu/events
+```
+
+So the local callback URL is usually:
+
+```text
+http://127.0.0.1:3000/feishu/events
+```
+
+### 4. Expose the Webhook with Cloudflare Tunnel
+
+Install Cloudflare Tunnel:
+
+```powershell
+winget install Cloudflare.cloudflared
+cloudflared --version
+```
+
+Log in and create a tunnel:
+
+```powershell
+cloudflared tunnel login
+cloudflared tunnel create openclaw
+```
+
+Map a subdomain:
+
+```powershell
+cloudflared tunnel route dns openclaw <YOUR_DOMAIN>
+```
+
+A starter `config.yml` can look like this:
+
+```yaml
+tunnel: openclaw
+credentials-file: C:\Users\<YOUR_USERNAME>\.cloudflared\<TUNNEL_ID>.json
+
+ingress:
+  - hostname: <YOUR_DOMAIN>
+    service: http://127.0.0.1:3000
+  - service: http_status:404
+```
+
+Run the tunnel:
+
+```powershell
+cloudflared tunnel run openclaw
+```
+
+The final Feishu event subscription URL is usually:
+
+```text
+https://<YOUR_DOMAIN>/feishu/events
+```
+
+### 5. Port Reference
+
+According to the local `Setup.md`, this deployment pattern uses these common ports:
+
+| Port | Purpose |
+| --- | --- |
+| `18789` | Gateway / ws |
+| `18791` | browser control |
+| `3000` | Feishu webhook |
+
+### 6. First-Time Private Chat Authorization
+
+If Feishu private chat reports that access is not configured, approve the pairing code on the machine running OpenClaw:
+
+```powershell
+openclaw pairing approve feishu <PAIRING_CODE>
+```
+
+## Recommended Validation Order
+
+To validate this advanced path, check things in this order:
+
+1. local `openclaw gateway status` is healthy
+2. local port `127.0.0.1:3000` is reachable
+3. `cloudflared tunnel run openclaw` establishes the tunnel
+4. `https://<YOUR_DOMAIN>/feishu/events` is reachable
+5. Feishu event subscription validation passes
+6. the bot can receive and process a private message
+
+## What You Should Have After This Chapter
+
+After following the material on this page, you should have two layers of confidence:
+
+- a basic layer: local Gateway + CLI + Workspace are working
+- an advanced layer: Feishu can call back into your local OpenClaw system through Cloudflare Tunnel
+
+That gives the later chapters on model selection, skills, token optimization, and security a real deployment foundation instead of placeholders.

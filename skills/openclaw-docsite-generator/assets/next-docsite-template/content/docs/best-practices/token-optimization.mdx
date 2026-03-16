@@ -1,0 +1,43 @@
+---
+title: Token Optimization
+description: Reduce context waste and model cost with retrieval discipline, compression, routing, and local indexing patterns.
+order: 1
+---
+
+## Core Techniques
+
+| Technique | What it does | Best use case |
+| --- | --- | --- |
+| QMD retrieval | pull only the most relevant chunks for the current task | large knowledge bases |
+| context compression | summarize before handing context to expensive models | multi-step research or long transcripts |
+| model routing | reserve premium models for high-value steps | mixed-cost workflows |
+| heartbeat tasks | run small periodic checks instead of large repeated full scans | monitoring and automation |
+| local model indexing | preprocess private or high-volume data on local infrastructure | privacy-sensitive corpora |
+
+## Practical Workflow
+
+1. Retrieve only the documents that are likely to matter.
+2. Compress those documents into a smaller working set.
+3. Route the compressed task to the right model tier.
+4. Persist only the summary that future runs will actually need.
+
+## When QMD Retrieval Helps
+
+QMD-style retrieval is useful when the real issue is document selection quality, not raw model intelligence. If the wrong chunks are being surfaced, upgrading the model often just makes the system more expensive while staying unreliable.
+
+## Compression Guidance
+
+Compression should keep decision-relevant facts and remove narrative repetition. Good compression preserves:
+
+- constraints
+- entity names
+- exact numbers
+- open questions
+- actionable next steps
+
+## Review Checklist
+
+- Can the task succeed with less context?
+- Are you sending repeated boilerplate every turn?
+- Is the most expensive model only used where it creates real leverage?
+- Are summaries replacing original context when they should remain linked?

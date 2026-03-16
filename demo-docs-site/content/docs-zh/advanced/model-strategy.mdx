@@ -1,0 +1,57 @@
+﻿---
+title: 模型策略
+description: 按任务形态、成本约束和运行环境来选择模型，而不是把所有任务都扔给同一个模型。
+order: 2
+---
+
+## 任务到模型的映射
+
+| 任务类型 | 推荐模型方向 | 为什么 |
+| --- | --- | --- |
+| 编码任务 | Claude、GPT、Qwen coder | 代码生成、修改与仓库理解更强 |
+| Web 研究 | GPT、Claude、Grok | 更适合跨来源总结和综合 |
+| 深度推理 | Claude 与高阶 GPT | 在复杂决策和长链路规划上更稳 |
+| 自动化任务 | Qwen 或小模型 | 重复性任务更看重成本效率 |
+| 大量上下文处理 | 本地模型 | 适合私有数据和高吞吐总结 |
+
+关键不在于背模型名字，而在于让能力、成本与任务类型对齐。
+
+## 路由启发式
+
+可以先从简单规则开始：
+
+- 只要是代码改写或仓库分析，优先进入 coder 型模型档位
+- 需要阅读大量资料时，优先长上下文或总结强的模型
+- 周期性自动化任务，优先选择满足质量门槛的最小模型
+- 私有数据不能出边界时，优先本地或私有部署模型
+
+## 示例策略
+
+```yaml
+routes:
+  - when: task_type == "coding"
+    use: coder-primary
+  - when: task_type == "research"
+    use: research-primary
+  - when: task_type == "automation"
+    use: low-cost-runner
+  - when: task_type == "private-indexing"
+    use: local-context-model
+fallback: reasoning-default
+```
+
+## 先量化，再扩模型
+
+在引入更多模型前，至少监控：
+
+- 任务成功率
+- 平均延迟
+- 平均 token 成本
+- 人工返工率
+- 各任务类型的失败率
+
+## 常见反模式
+
+- 一个最贵模型跑所有任务
+- 还没测清当前路由策略就继续加提供方
+- 依据流行度，而不是依据任务证据来选模型

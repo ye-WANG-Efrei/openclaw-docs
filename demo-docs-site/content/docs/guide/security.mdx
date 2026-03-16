@@ -1,0 +1,192 @@
+---
+title: Security
+description: Understand OpenClaw's security philosophy and master protective measures across four dimensions — messaging channels, sensitive information, execution environments, and platform integration
+order: 6
+---
+
+Before we discuss security for AI assistants, let's first clarify OpenClaw's design philosophy — its security is built on two core principles:
+
+- **Local-first**: anything that can be processed locally stays off the public internet
+- **Explicit authorization**: any new access requires your active approval
+
+Once you understand these two points, all the security configurations that follow will feel completely natural.
+
+---
+
+## 1. DM Security Policies for Messaging Channels
+
+OpenClaw is often connected to platforms like Feishu, WeChat, and Telegram. This raises an important question: **how do you prevent strangers from freely calling your AI assistant — and draining your token balance?**
+
+OpenClaw provides four DM security policies. It is important to understand what each mode means:
+
+| Policy | Description | Recommendation |
+| --- | --- | --- |
+| `pairing` | Unknown senders must first obtain a pairing code and get your manual approval before they can chat | Recommended default, most secure |
+| `allowlist` | Only allows contacts preset in the configuration whitelist | Suitable for known-contacts scenarios |
+| `open` | Allows all inbound messages to access the AI directly | Never use without protection |
+| `disabled` | Ignores all DMs | For group-only scenarios |
+
+**Let's look closely at how `pairing` mode works:**
+
+When a stranger messages your bot, they receive a pairing code instead of direct AI access. You then need to manually execute the following on the terminal running the Gateway:
+
+```bash
+openclaw pair <code>
+```
+
+Only after you run this command can the other person officially start a conversation.
+
+> **Regarding `open` mode: it is strongly recommended that you never enable it without protection.** Once enabled, anyone can directly invoke your AI — at best, your tokens get drained; at worst, your privacy is exposed.
+
+**Configuration example:**
+
+```json
+{
+  "channels": {
+    "telegram": {
+      "enabled": true,
+      "botToken": "your-bot-token",
+      "dmPolicy": "pairing",
+      "allowFrom": ["tg:123456789"]
+    }
+  }
+}
+```
+
+---
+
+## 2. Isolated Management of Sensitive Information
+
+OpenClaw's Workspace file loading mechanism provides layered data privacy protection by design. The key is knowing which files are loaded and when.
+
+### The Special Status of MEMORY.md
+
+Among all Workspace files, `MEMORY.md` has a property that no other file has:
+
+> **`MEMORY.md` is only loaded in the Main Session — it is not invoked by sub-agents or regular sessions.**
+
+This means you can place long-term memory with security-sensitive content here, greatly reducing the risk of private information being inadvertently read or leaked by sub-Agents.
+
+### The Right Way to Store API Keys
+
+Do not write API Keys directly into `openclaw.json`. If that file is accidentally shared, the key is immediately exposed.
+
+The correct approach is to store keys in system environment variables, then reference them in the configuration:
+
+```json
+{
+  "skills": {
+    "entries": {
+      "my-skill": {
+        "apiKey": {
+          "source": "env",
+          "id": "MY_API_KEY"
+        }
+      }
+    }
+  }
+}
+```
+
+Setting the corresponding environment variable:
+
+```bash
+# macOS / Linux
+export MY_API_KEY="sk-..."
+
+# Windows PowerShell
+$env:MY_API_KEY = "sk-..."
+```
+
+---
+
+## 3. Code and Execution Environment Security
+
+When the AI needs to execute code or call complex Skills, the security of the execution environment becomes critical. OpenClaw provides two protection mechanisms.
+
+### Sandbox Execution
+
+Sandbox mode confines the Agent's execution operations to an isolated environment, preventing errors or malicious instructions from damaging the host machine:
+
+```json
+{
+  "agents": {
+    "defaults": {
+      "sandbox": {
+        "mode": "non-main",
+        "scope": "agent"
+      }
+    }
+  }
+}
+```
+
+For Skills that execute code or run scripts, **it is recommended to enable the sandbox by default.**
+
+### Local Models: The Highest Security Option
+
+Deploying local models via [Ollama](https://ollama.com) (such as Qwen, GLM, etc.) is currently the highest-security approach:
+
+- **Data never traverses the public internet** — all inference is completed on local servers
+- Ideal for processing confidential files, internal documents, and personal private data
+- This also serves as the Heartbeat optimization mentioned earlier — using a local small model for high-frequency inspection tasks is both secure and cost-effective
+
+```json
+{
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "ollama/qwen2.5:7b"
+      }
+    }
+  }
+}
+```
+
+---
+
+## 4. Authentication Security for Platform Integrations like Feishu
+
+In advanced Feishu deployment scenarios, security relies on multi-layer authentication across the entire chain — no single layer can be skipped.
+
+**Authentication chain:**
+
+```text
+Feishu user message
+  → Feishu servers (App ID + App Secret mutual authentication)
+    → Cloudflare Tunnel (encrypted channel, avoids exposing local ports)
+      → Local Gateway (first-time DM requires pair authorization)
+        → OpenClaw Agent
+```
+
+**What each layer does:**
+
+1. **App Credentials**: Feishu's official App ID and App Secret perform mutual authentication, ensuring only legitimate Feishu apps can trigger callbacks
+2. **Cloudflare Tunnel**: Traffic travels through an encrypted channel, eliminating the port scanning and attack risks that come from directly opening router ports
+3. **First-time authorization confirmation**: Even after the public internet path is fully connected, the bot will show "access not configured" on the first private chat — manual authorization via the `pair` command on the local machine is still required
+
+---
+
+## 5. Common Risk Quick Reference
+
+| Risk | Potential consequence | Mitigation |
+| --- | --- | --- |
+| DM policy set to `open` | Token theft, privacy leakage | Always use `pairing` or `allowlist` |
+| API Key written as plaintext in config file | Key exposed along with the file | Use environment variable injection |
+| Sandbox execution not enabled | Malicious scripts damage the host machine | Enable `sandbox` by default |
+| Sensitive memory stored in regular Workspace files | Sub-Agent inadvertently reads private data | Place sensitive content in `MEMORY.md` |
+| Gateway directly exposed on a public port | Susceptible to port scanning and attacks | Use Cloudflare Tunnel for local tunneling |
+| Third-party Skill not reviewed | Malicious code execution | Read through `SKILL.md` and `scripts/` before installing |
+| Prompt injection | External content tricks the model into dangerous actions | Separate untrusted input from system instructions |
+
+---
+
+## 6. The Three Security Pillars
+
+Finally, three principles summarize the core of running OpenClaw securely:
+
+1. **Always keep `dmPolicy: "pairing"`** — ensure every new access goes through your explicit authorization
+2. **Store long-term memory in `MEMORY.md`** — use the system's loading isolation mechanism to protect private data
+3. **For sensitive tasks, prefer local models** — data that never leaves your machine is genuinely secure
+
+With these three in place, OpenClaw's security boundary is fundamentally solid.

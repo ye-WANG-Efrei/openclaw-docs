@@ -1,0 +1,400 @@
+---
+title: 安装和部署
+description: 安装 OpenClaw、启动 Gateway 并完成初始环境配置
+order: 2
+---
+
+在正式上手 OpenClaw 之前，我们先把它的基础运行结构搞清楚。
+
+OpenClaw 的核心是一个叫做 **Gateway** 的本地服务进程。你所有的消息通道、Agent 对话、工具调用，都经过它来统一调度。所以我们的目标很简单：**把 Gateway 跑起来，再把 Workspace 配置好**，其他一切都在这个基础上扩展。
+
+---
+
+## 一、系统要求
+
+在开始之前，先确认基础运行环境已经准备好。OpenClaw 是一个基于 Node.js 的工具，所以对环境的要求并不复杂：
+
+| 项目 | 要求 | 说明 |
+| --- | --- | --- |
+| Node.js | 22 以上 | 必须项，版本低了会报错 |
+| 操作系统 | macOS、Linux、Windows（WSL2） | Windows 用户请使用 WSL2，原生 PowerShell 也支持安装 |
+| 包管理器 | npm、pnpm 或 bun | 任选一个即可 |
+
+> 如果你不确定自己的 Node.js 版本，可以运行 `node -v` 检查。版本不对是新手最常见的安装失败原因之一。
+
+---
+
+## 二、安装 OpenClaw
+
+安装方式有三种，选一种适合你的系统就行。
+
+### macOS / Linux
+
+```bash
+curl -fsSL https://openclaw.ai/install.sh | bash
+```
+
+### Windows PowerShell
+
+```powershell
+iwr -useb https://openclaw.ai/install.ps1 | iex
+```
+
+### 使用 npm / pnpm 安装 CLI
+
+如果你更习惯用包管理器，也可以直接全局安装：
+
+```bash
+npm install -g openclaw@latest
+
+# 或
+pnpm add -g openclaw@latest
+```
+
+安装完成后，运行引导向导完成初始配置：
+
+```bash
+openclaw onboard --install-daemon
+
+# 或只运行配置向导，不安装守护进程
+openclaw onboard
+```
+
+`--install-daemon` 会把 Gateway 注册为系统后台服务，开机自启。如果你只是想先试试，不带这个参数也没关系。
+
+---
+
+## 三、验证安装是否成功
+
+安装完成后，用两条命令确认一下状态：
+
+```bash
+openclaw gateway status
+openclaw dashboard
+```
+
+- `gateway status` 告诉你 Gateway 是否正在运行
+- `dashboard` 会在浏览器里打开控制面板
+
+如果这两条命令都没有报错，说明基础环境已经就绪了。
+
+---
+
+## 四、启动 Gateway
+
+Gateway 有两种运行模式，根据你的场景选择：
+
+```bash
+# 前台调试运行（看得到日志，适合初次排查问题）
+openclaw gateway --port 18789 --verbose
+
+# 后台守护运行（正式使用）
+openclaw gateway start
+```
+
+Gateway 启动后，也可以直接在浏览器访问控制面板：
+
+```text
+http://127.0.0.1:18789
+```
+
+验证 Agent 是否工作正常，发一条测试消息：
+
+```bash
+openclaw agent --message "帮我总结今天的会议" --thinking high
+```
+
+---
+
+## 五、理解 Workspace 工作空间
+
+很多新手跳过了这一步，但 Workspace 其实是 OpenClaw 最核心的概念之一，值得花几分钟搞清楚。
+
+**Workspace 是 Agent 的工作目录。** 它读取上下文、保存记忆、执行工具操作，都在这个目录里完成。你对 Agent 行为的绝大多数定制，都是通过修改 Workspace 里的文件来实现的。
+
+### Workspace 目录结构
+
+```text
+~/.openclaw/
+├── openclaw.json          ← 核心配置文件
+├── workspace/
+│   ├── AGENTS.md          ← 操作指令与记忆
+│   ├── SOUL.md            ← 人格与语气定义
+│   ├── TOOLS.md           ← 工具使用说明
+│   ├── IDENTITY.md        ← 助手身份信息
+│   ├── USER.md            ← 用户信息与偏好
+│   ├── MEMORY.md          ← 长期记忆
+│   └── skills/            ← 技能模块
+├── agents/
+├── skills/
+└── credentials/
+```
+
+### 核心文件说明
+
+这几个文件每次会话开始时都会被自动加载，直接决定 Agent 的行为方式：
+
+| 文件 | 用途 | 加载时机 |
+| --- | --- | --- |
+| `AGENTS.md` | 操作指令、连续性规则、重要记忆 | 每会话首条消息 |
+| `SOUL.md` | 人格定义、语气、边界 | 每会话首条消息 |
+| `TOOLS.md` | 环境特定的工具说明 | 每会话首条消息 |
+| `USER.md` | 用户信息、偏好、项目背景 | 每会话首条消息 |
+| `IDENTITY.md` | 助手身份信息（名字、emoji、头像） | 每会话首条消息 |
+| `MEMORY.md` | 长期记忆 | 仅主会话 |
+
+> 这些文件都是普通的 Markdown 文件，直接用文本编辑器修改就能生效，下次会话就会应用新内容。
+
+---
+
+## 六、配置 openclaw.json
+
+`~/.openclaw/openclaw.json` 是 OpenClaw 的主配置文件，使用 JSON5 格式（支持注释和末尾逗号）。
+
+我们从最小配置开始，逐步理解每个部分的作用。
+
+### 最小配置
+
+```json
+{
+  "agents": {
+    "defaults": {
+      "workspace": "~/.openclaw/workspace"
+    }
+  },
+  "channels": {
+    "telegram": {
+      "enabled": true,
+      "botToken": "123456:ABC...",
+      "dmPolicy": "pairing",
+      "allowFrom": ["tg:123456789"]
+    }
+  }
+}
+```
+
+### 配置模型与 Heartbeat
+
+这里有一个值得注意的地方：`heartbeat` 是 OpenClaw 的定时唤醒机制，用于推进长期任务。配置里你可以指定主模型和备用模型：
+
+```json
+{
+  "agents": {
+    "defaults": {
+      "workspace": "~/.openclaw/workspace",
+      "model": {
+        "primary": "anthropic/claude-sonnet-4-5",
+        "fallbacks": ["openai/gpt-5.2"]
+      },
+      "heartbeat": {
+        "every": "30m",
+        "target": "last"
+      }
+    }
+  }
+}
+```
+
+### 会话管理
+
+会话的作用域和重置规则，也可以在配置里统一控制：
+
+```json
+{
+  "session": {
+    "dmScope": "per-channel-peer",
+    "reset": {
+      "mode": "daily",
+      "atHour": 4,
+      "idleMinutes": 120
+    }
+  }
+}
+```
+
+---
+
+## 七、配置对话终端（Channels）
+
+OpenClaw 支持多种消息通道。对于私聊（DM）接入，你需要选择一个安全策略。这里有四种模式，建议优先从 `pairing` 开始：
+
+| 策略 | 说明 | 适用场景 |
+| --- | --- | --- |
+| `pairing` | 未知发送者会收到配对码，需主人批准 | **默认推荐，最安全** |
+| `allowlist` | 仅允许白名单中的发送者 | 已知联系人 |
+| `open` | 允许所有入站 DM | 公开机器人 |
+| `disabled` | 忽略所有 DM | 仅群组使用 |
+
+### Telegram 配置示例
+
+```json
+{
+  "channels": {
+    "telegram": {
+      "enabled": true,
+      "botToken": "your-bot-token",
+      "dmPolicy": "pairing",
+      "allowFrom": ["tg:123456789"],
+      "streaming": "partial"
+    }
+  }
+}
+```
+
+---
+
+## 八、配置多智能体（Multi-Agent）
+
+当你需要不同场景使用不同 Agent 时，可以在配置里定义多个 Agent，每个 Agent 有自己独立的 Workspace：
+
+```json
+{
+  "agents": {
+    "defaults": {
+      "workspace": "~/.openclaw/workspace"
+    },
+    "list": [
+      {
+        "id": "main",
+        "description": "通用助手"
+      },
+      {
+        "id": "coder",
+        "workspace": "~/.openclaw/workspace-coder",
+        "description": "编程专家"
+      }
+    ]
+  }
+}
+```
+
+---
+
+## 九、安装技能（Skills）
+
+Skills 是 OpenClaw 的能力扩展模块。安装后 Agent 会自动学会使用对应的工具。
+
+```bash
+# 安装 ClawHub CLI
+npm install -g clawhub
+
+# 搜索技能
+clawhub search "image generation"
+clawhub search "weather"
+
+# 安装技能
+clawhub install baoyu-image-gen
+```
+
+| 命令 | 说明 |
+| --- | --- |
+| `clawhub list` | 列出已安装技能 |
+| `clawhub update <skill>` | 更新指定技能 |
+| `clawhub update --all` | 更新全部技能 |
+| `clawhub update --force` | 强制更新，解决版本冲突时使用 |
+
+---
+
+## 十、常用 CLI 命令速查
+
+### Gateway 管理
+
+```bash
+openclaw gateway status   # 查看当前网关状态
+openclaw gateway start
+openclaw gateway stop
+openclaw gateway restart
+```
+
+### 配置管理
+
+```bash
+openclaw onboard
+openclaw config get agents.defaults.workspace
+openclaw config set agents.defaults.model.primary "openai/gpt-5.2"
+```
+
+### 诊断工具
+
+遇到问题时，先跑一下 `doctor`，大部分常见配置问题它都能自动检测：
+
+```bash
+openclaw doctor
+openclaw doctor --fix
+openclaw logs --follow
+```
+
+---
+
+## 十一、安全最佳实践
+
+### 多用户环境
+
+如果多人共用同一个 OpenClaw 实例，务必设置会话隔离，避免用户之间的上下文互相泄露：
+
+```json
+{
+  "session": {
+    "dmScope": "per-channel-peer"
+  }
+}
+```
+
+### 沙盒执行
+
+对于执行脚本类的操作，建议开启沙盒模式，限制 Agent 的操作范围：
+
+```json
+{
+  "agents": {
+    "defaults": {
+      "sandbox": {
+        "mode": "non-main",
+        "scope": "agent"
+      }
+    }
+  }
+}
+```
+
+---
+
+## 十二、故障排除
+
+遇到问题先对照这张表快速定位：
+
+| 错误 | 原因 | 解决方法 |
+| --- | --- | --- |
+| `Config validation failed` | 配置格式错误 | 运行 `openclaw doctor` |
+| `Unauthorized` | API Key 无效 | 检查 `auth` 配置 |
+| `Session not found` | 会话已过期 | 发送 `/new` 重置会话 |
+
+---
+
+## 资源链接
+
+- 官网：`openclaw.ai`
+- 文档：`docs.openclaw.ai`
+- GitHub：`github.com/openclaw/openclaw`
+- Discord：`discord.gg/clawd`
+- 技能市场：`clawhub.com`
+
+---
+
+## 总结
+
+完成这一章之后，你应该已经具备了：
+
+1. **Gateway** 是系统调度核心，所有操作都经过它。
+2. **Workspace** 是 Agent 的工作根目录，行为定制从这里开始。
+3. **`openclaw.json`** 控制模型、通道、会话、沙盒等所有主要行为。
+4. 默认安全策略优先，`pairing` 模式是最安全的 DM 接入方式。
+5. 多智能体和 Skills 可以随时按需扩展。
+
+---
+
+## 进阶部署
+
+如果你需要将 OpenClaw 接入飞书，并通过 Cloudflare Tunnel 暴露公网 webhook，请参考进阶部署指南（同时内附常见 Bug 解决方案）：
+
+[***进阶版本：飞书 + Cloudflare Tunnel 完整部署***](https://github.com/ye-WANG-Efrei/ClawBot/blob/main/Setup.md)

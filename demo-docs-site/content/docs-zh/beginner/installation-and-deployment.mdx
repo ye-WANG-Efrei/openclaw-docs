@@ -1,0 +1,240 @@
+﻿---
+title: 安装与部署
+description: 从基础安装到实战部署，先把 openclaw 和 Gateway 跑起来，再扩展到飞书和 Cloudflare Tunnel 的高级配置。
+order: 2
+---
+
+## 基础安装：先把 OpenClaw 跑起来
+
+这一部分主要根据你提供的 OpenClaw 新手站整理，目标是先完成最短可运行路径。
+
+### 系统要求
+
+| 项目 | 要求 | 说明 |
+| --- | --- | --- |
+| Node.js | 22 以上 | 必须项 |
+| 操作系统 | macOS、Linux、Windows（WSL2） | 官方推荐范围 |
+| 包管理器 | npm、pnpm 或 bun | 任一即可 |
+
+### 安装方式
+
+#### macOS / Linux
+
+```bash
+curl -fsSL https://openclaw.ai/install.sh | bash
+```
+
+#### Windows PowerShell
+
+```powershell
+iwr -useb https://openclaw.ai/install.ps1 | iex
+```
+
+#### 使用 npm / pnpm 安装 CLI
+
+```bash
+npm install -g openclaw@latest
+
+# or
+pnpm add -g openclaw@latest
+```
+
+### 运行引导向导
+
+```bash
+openclaw onboard --install-daemon
+
+# 或只运行配置向导
+openclaw onboard
+```
+
+### 基础验证
+
+```bash
+openclaw gateway status
+openclaw dashboard
+```
+
+如果要前台调试运行 Gateway：
+
+```bash
+openclaw gateway --port 18789 --verbose
+```
+
+如果要后台守护运行：
+
+```bash
+openclaw gateway start
+```
+
+## 基础部署：第一次跑通链路
+
+完成安装后，建议至少验证这三件事：
+
+1. `openclaw gateway status` 能看到 Gateway 已正常运行。
+2. `openclaw dashboard` 或浏览器访问控制面板没有问题。
+3. 你能从 CLI 发出一条测试消息或启动一次 Agent 对话。
+
+例如：
+
+```bash
+openclaw agent --message "帮我总结今天的会议" --thinking high
+```
+
+## 进阶配置：飞书 + Cloudflare + openclaw
+
+这一部分根据你给的 `Setup.md` 整理，属于一套更偏实战的高级部署方案。
+
+这里有一个命名细节要记住：
+
+- 项目资料里可能会写 `ClawBot`
+- 但 CLI 和配置命令统一按 `openclaw` 使用
+
+### 1. 创建飞书应用
+
+在飞书开放平台创建企业自建应用后，至少要完成这些动作：
+
+- 添加“机器人”能力
+- 开通消息相关权限
+- 记录 `App ID` 和 `App Secret`
+- 创建并发布第一个版本
+
+推荐权限候选包括：
+
+- `im:message`
+- `im:message.p2p_msg`
+- `im:message.group_at_msg`
+- `im:message.group_msg`
+- `im:chat`
+
+### 2. 安装并配置 Feishu 插件
+
+```powershell
+openclaw plugins install @miheng-clawd/feishu
+```
+
+写入凭证：
+
+```powershell
+openclaw config set channels.feishu.appid "<YOUR_APP_ID>"
+openclaw config set channels.feishu.appSecret "<YOUR_APP_SECRET>"
+```
+
+如果需要显式添加 channel：
+
+```powershell
+openclaw channels capabilities
+openclaw channels add --channel feishu
+openclaw channels list
+```
+
+### 3. 启动 Gateway 并确认本地回调
+
+```powershell
+openclaw gateway restart
+openclaw gateway status
+```
+
+如果 Gateway 没有正常起来，可以切换到本地模式：
+
+```powershell
+openclaw config set gateway.mode "local"
+openclaw gateway restart
+openclaw gateway status
+```
+
+飞书本地 webhook 路径通常写作：
+
+```text
+/feishu/events
+```
+
+因此本地回调地址通常是：
+
+```text
+http://127.0.0.1:3000/feishu/events
+```
+
+### 4. 用 Cloudflare Tunnel 暴露公网 webhook
+
+安装：
+
+```powershell
+winget install Cloudflare.cloudflared
+cloudflared --version
+```
+
+登录与创建 tunnel：
+
+```powershell
+cloudflared tunnel login
+cloudflared tunnel create openclaw
+```
+
+绑定子域名：
+
+```powershell
+cloudflared tunnel route dns openclaw <YOUR_DOMAIN>
+```
+
+`config.yml` 可参考：
+
+```yaml
+tunnel: openclaw
+credentials-file: C:\Users\<YOUR_USERNAME>\.cloudflared\<TUNNEL_ID>.json
+
+ingress:
+  - hostname: <YOUR_DOMAIN>
+    service: http://127.0.0.1:3000
+  - service: http_status:404
+```
+
+启动 tunnel：
+
+```powershell
+cloudflared tunnel run openclaw
+```
+
+最终飞书后台填写的事件订阅地址通常是：
+
+```text
+https://<YOUR_DOMAIN>/feishu/events
+```
+
+### 5. 端口说明
+
+根据 `Setup.md`，这套方案里常见端口分工是：
+
+| 端口 | 用途 |
+| --- | --- |
+| `18789` | Gateway / ws |
+| `18791` | browser control |
+| `3000` | Feishu webhook |
+
+### 6. 首次私聊授权
+
+如果飞书私聊里提示未配置访问权限，可以在运行 OpenClaw 的机器上执行：
+
+```powershell
+openclaw pairing approve feishu <PAIRING_CODE>
+```
+
+## 推荐的验证顺序
+
+把这套高级配置跑通时，建议按这个顺序检查：
+
+1. 本地 `openclaw gateway status` 正常
+2. 本地 `127.0.0.1:3000` 端口可达
+3. `cloudflared tunnel run openclaw` 成功建立隧道
+4. 公网地址 `https://<YOUR_DOMAIN>/feishu/events` 可以访问
+5. 飞书后台事件订阅验证通过
+6. 私聊机器人能收到并处理消息
+
+## 这一步完成后你应该得到什么
+
+完成这页内容对应的配置后，你应该至少得到两层能力：
+
+- 基础层：本地 Gateway + CLI + Workspace 已可运行
+- 进阶层：飞书消息可以通过 Cloudflare Tunnel 回调到本地 OpenClaw 系统
+
+这样后面再继续写模型选择、Skill、Token 优化和安全章节时，就有一个真实可运行的部署基础了。

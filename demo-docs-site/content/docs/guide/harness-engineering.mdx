@@ -1,0 +1,347 @@
+---
+title: What is Harness Engineering
+description: One step beyond prompt engineering and context engineering — understand how to advance AI from single-turn Q&A into repeatable, engineered workflows
+order: 8
+---
+
+## What This Chapter Answers
+
+Most people's first step in learning AI is learning how to write prompts. A bit further along, they start to understand `context engineering` — how to prepare good context, materials, and constraints for the model.
+
+But when the AI's role shifts from "answering one question" to "continuously completing tasks on your behalf," simply knowing how to write prompts or pack context is no longer enough.
+
+This is where a genuinely new concept becomes critical: `harness engineering`.
+
+The problem it solves is not "is this single prompt well written" — it is:
+
+- What environment does the AI work in
+- What tools can it call
+- How do you judge whether the result is acceptable after it finishes
+- How does it record its progress so long tasks don't lose context halfway through
+- Which steps require human intervention, and which can proceed automatically
+
+If `prompt engineering` is about "how you talk to AI," and `context engineering` is about "what material you give AI," then `harness engineering` is about: **how you build a complete, runnable work system that lets AI perform reliably.**
+
+## From Prompt to Context, and then to Harness
+
+These three concepts represent three successive upgrades in how AI is used.
+
+| Stage | Core question | Focus | Suitable task shape |
+|---|---|---|---|
+| `prompt engineering` | How should I ask? | Is the instruction expressed clearly | Single-turn Q&A, rewriting, summarization |
+| `context engineering` | What material should I give the model? | Context organization, material selection, constraint supplements | Long document summarization, research analysis, code reading |
+| `harness engineering` | How do I make AI execute tasks reliably? | Environment, tools, standards, records, flow control | Agents, automation, multi-step workflows |
+
+This is not saying the earlier concepts are obsolete — it is saying: **the more complex the task, the more you need to upgrade from "writing a good prompt" to "building a working system."**
+
+## Why Prompts Are No Longer Enough
+
+For simple tasks, a single prompt is often sufficient.
+
+For example:
+
+- Summarize this article for me
+- Translate this passage
+- Edit this email
+
+But once the task looks like this:
+
+- Read multiple sources and produce a research report
+- Walk through a code repository, modify files, and run verification
+- Turn a recording into a transcript, summary, podcast copy, and publish materials
+- Have multiple agents divide the work and continuously complete a project
+
+The problem changes.
+
+The model is no longer "answering one sentence" — it is making continuous judgments across a much longer task chain. It will encounter many problems that a prompt alone cannot solve:
+
+- Too many files, no idea where to look for information
+- Too many tools, no idea when to call which one
+- Task too long, context grows heavier, responses become slower and dumber
+- No clear standard, no way to know whether the result is acceptable
+- No process record, once context is lost mid-task, the work breaks down
+
+So what we really need to do is not just keep polishing prompts, but build a "track system" that lets AI work continuously. This is the value of `harness engineering`.
+
+## What is Harness Engineering
+
+The word `Harness` can be understood as a "control system" or "work framework."
+
+Its core idea is simple:
+
+> Do not just ask AI for an answer — provide AI with an environment where it can continuously complete tasks.
+
+This environment typically contains at least four components.
+
+### 1. A Clear Work Environment
+
+AI does not work by "intuition" — it depends heavily on environmental structure.
+
+If your directories are messy, files are named arbitrarily, and material entry points are unclear, the AI will constantly waste attention on "which file should I read" and "is this the latest version."
+
+So the first step of a good harness is making the environment clear:
+
+- Consistent file naming conventions
+- Predictable directory hierarchy
+- Explicit input and output paths
+- Fixed locations for key materials
+- Fixed output naming rules for each task type
+
+This sounds like engineering hygiene, but it directly determines whether AI can execute tasks reliably.
+
+### 2. Reusable Tools and Skills
+
+If AI has to figure out how to complete a task from scratch every time, it will be very unreliable.
+
+A better approach is to give it ready-made tools and workflow modules. For example:
+
+- Transcription tools
+- Deep research tools
+- Review tools
+- Report-to-`PPT` workflow
+- Report-to-`PDF` workflow
+- Code modification and verification scripts
+- Reusable `skills`
+
+This step is crucial. When AI can call existing tools, it is no longer "improvising" — it is "executing within a stable framework."
+
+This is also why systems like `Codex` and `Claude Code` matter. Their significance is not just "being able to write code" — it is that they bring AI into a real work environment:
+
+- Can read files
+- Can modify files
+- Can run commands
+- Can verify results step by step
+
+This is no longer ordinary chat — it is task execution within an engineering system.
+
+### 3. Explicit Acceptance Criteria
+
+One thing people most often overlook when asking AI to do something is: **AI must know what "the standard" is.**
+
+Without a standard, AI cannot self-calibrate.
+
+For example, in a research task, you can explicitly require:
+
+- Only look at material from the past `3` or `6` months
+- Sources must be primary sources
+- Aggregation or syndication sites are not accepted
+- At least `2` sources must cross-validate each finding
+- Output must include conclusion, evidence, risk, and next steps
+
+With these standards, AI can self-check after execution, rather than waiting for you to re-judge at every step.
+
+So the move from `human in the loop` to `agentic` is not about removing humans entirely — it is about shifting the human role from "watching every step" to "intervening at key acceptance points."
+
+### 4. Process Records and Long-Task Management
+
+Many people assume longer context is always better. It is not.
+
+Long context does bring more information, but once tasks become complex, the model may show obvious degradation in the middle-to-late stages:
+
+- Slower
+- Dumber
+- Missing requirements that were stated earlier
+- Forgetting the current stage of the task
+- Output starts to drift
+
+So complex tasks cannot rely on context alone — they also need external recording mechanisms.
+
+For example:
+
+- Use documents to record task steps
+- Use status files to record current progress
+- Use logs to record key decisions
+- Persist intermediate outputs to disk, not just inside the conversation
+
+The benefit: even if AI switches models mid-task, restarts a session, or spans multiple agents, it can continue forward based on the records.
+
+## Why Codex, Skills, and Multi-Agent All Connect to This
+
+Many people, when they first hear `harness engineering`, think it is abstract. But look at real systems and you will find it is already very concrete.
+
+### Codex & Claude Code
+
+`Codex` & `Claude Code` represent a mode of "letting AI act within a real work environment."
+
+They do not just generate code — they can work inside a repository to:
+
+- Read context
+- Modify files
+- Call tools
+- Execute commands
+- Verify and iterate
+
+This is harness in practice. You are not just giving it a prompt — you are giving it an operable environment.
+
+### Skills
+
+The purpose of `skills` is to modularize repetitive tasks.
+
+If you regularly need to:
+
+- Extract knowledge from video transcripts
+- Structurally organize documents
+- Review pull requests
+- Produce standardized research output
+
+Then the most stable approach is not to re-describe the task every time — it is to crystallize it into a skill.
+
+A skill is fundamentally the "stable tool capability" within a harness.
+
+### Multi-Agent
+
+Multi-agent is not as simple as opening several model windows at once.
+
+Genuinely effective multi-agent always has division rules behind it:
+
+- Who handles retrieval
+- Who handles production
+- Who handles verification
+- Who handles aggregation
+- How to roll back on failure
+
+Without these boundaries, multi-agent only amplifies chaos, not efficiency.
+
+So the ceiling of multi-agent is determined not by how many agents you opened, but by how clearly the harness is defined.
+
+## Human in the Loop is a Design Question
+
+When many people hear `agentic`, they assume the goal is "eliminating humans entirely."
+
+A more realistic understanding is:
+
+- Low-risk, repetitive steps: let AI handle them automatically
+- High-risk, high-judgment steps: have humans intervene
+
+This is more mature system design.
+
+So `human in the loop` is not a failure — it is a mechanism that must be designed in from the start.
+
+The key questions are not "whether humans are involved" but:
+
+- At which steps does the human intervene
+- What do they look at when they do
+- How does the system continue automatically after intervention
+
+In other words, a good harness does not eliminate human involvement — it places human involvement at its most valuable points.
+
+## An Easy-to-Understand Example
+
+Suppose you want to build a content production pipeline.
+
+If you only know how to write prompts, you might have to re-explain each step:
+
+- Help me organize the planning document
+- Help me generate poster copy
+- Help me transcribe the audio
+- Help me write the podcast copy
+- Help me organize the publication materials
+
+Each step feels like a separate ask for help.
+
+But if you design the system with `harness engineering`, you would set up:
+
+- Fixed planning template
+- Fixed directory and file naming rules
+- Fixed transcription tool
+- Fixed summary template
+- Fixed podcast copy output format
+- Fixed publication materials checklist
+- Fixed human review checkpoint
+
+With this in place, AI is no longer running five disconnected small tasks — it is running a reusable workflow.
+
+This is the difference between "knowing how to chat" and "knowing how to work."
+
+## How to Start Practicing
+
+If you already know how to write prompts, here is an upgrade path to follow step by step.
+
+### Step 1: Organize the Environment First
+
+Ask yourself a few questions:
+
+- Are my files and directories clear
+- Can AI reliably find the inputs and outputs
+- Do different tasks have consistent naming rules
+- Are similar materials stored in the same location
+
+### Step 2: Crystallize Reusable Tools
+
+Identify the tasks you repeat most often and turn them into fixed modules:
+
+- Transcription
+- Summarization
+- Research
+- Review
+- Report output
+- Automated verification
+
+
+### Step 3: Write Clear Acceptance Criteria
+
+Do not just say "help me write a research report" — specify:
+
+- Data source requirements
+- Time range requirements
+- Cross-validation requirements
+- Output structure requirements
+- Which conditions require the result to be redone
+
+### Step 4: Persist the Process to Disk
+
+Complex tasks must have process records — do not keep all state inside the chat context.
+
+Record:
+
+- Current stage
+- Completed steps
+- Next steps planned
+- Failure reasons
+- Intermediate output paths
+
+### Step 5: Define Human Intervention Points
+
+Think through which steps can proceed automatically and which need human confirmation.
+
+For example:
+
+- External publication must have human review
+- Expenses must have human confirmation
+- Sensitive data access must have human approval
+
+This makes your system both automated and controllable.
+
+## Common Misconceptions
+
+### Misconception 1: Treating Harness as a More Complex Prompt
+
+Harness is not an upgraded prompt — it is a task runtime framework.
+
+### Misconception 2: Chasing Full Automation From Day One
+
+Full automation is not the starting point — stability is.
+
+Many workflows that achieve "80% automated + 20% human review at key steps" are far more reliable than blindly pursuing 100% automation.
+
+### Misconception 3: Deploying Many Agents Before Designing the Framework
+
+If the responsibility boundaries, tool permissions, and rollback mechanisms have not been designed, more agents will only amplify errors faster.
+
+### Misconception 4: Focusing Only on the Model, Not the System
+
+Model capability obviously matters, but in many real tasks, what actually determines output quality is the environment, workflow, standards, and records.
+
+## The Final Understanding
+
+You can think of the evolution of AI use like this:
+
+- `prompt engineering` makes AI better at answering
+- `context engineering` makes AI better at understanding material
+- `harness engineering` makes AI better at working
+
+This is also why the most valuable AI applications today increasingly look like a system, not just a chat box.
+
+When you start caring about directory structure, tool chains, acceptance standards, process records, human intervention, and multi-agent collaboration, you are no longer just "using a model" — you are doing engineering design for AI.
+
+And that is the core meaning of `harness engineering`.

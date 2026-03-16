@@ -1,0 +1,66 @@
+---
+title: What is OpenClaw
+description: Understand why OpenClaw exists, what problems it solves, and how to approach the platform as a new user.
+order: 1
+---
+
+## Why OpenClaw Exists
+
+OpenClaw is a practical agent platform for teams that want more than a prompt playground. It brings together agents, model selection, tools, skills, and memory so that the system can be taught, governed, and improved over time instead of being rebuilt for each workflow.
+
+The key value is operational clarity. Instead of treating an agent as a single opaque prompt, OpenClaw gives you explicit places to decide which model should run, which tools are allowed, which skills should load, and what context should persist.
+
+## Problems It Solves
+
+| Problem | What breaks without structure | How OpenClaw helps |
+| --- | --- | --- |
+| Every task becomes a custom prompt | Quality drifts and behavior is hard to debug | Skills and config create repeatable workflows |
+| One model is used for everything | Cost rises and task fit gets worse | Model strategy and routing let you choose deliberately |
+| Tool access is bolted on late | Permissions become risky and inconsistent | Tool boundaries can be reviewed as part of the system design |
+| Context keeps growing | Quality drops while latency and spend climb | Memory and retrieval strategies keep context focused |
+
+## How OpenClaw Differs From Other Agent Frameworks
+
+| Framework style | Typical emphasis | OpenClaw emphasis |
+| --- | --- | --- |
+| Chain orchestration frameworks | Step graphs and integrations | Operator-friendly agent runtime with skills and model governance |
+| UI-first automation tools | Fast demos and low-code flows | Explicit engineering controls for tools, memory, and deployment |
+| Code-only agent shells | Thin runtime plus prompt logic | Reusable skill layer and documentation-ready structure |
+
+OpenClaw fits best when the team expects the agent system to grow into a product surface, an internal platform, or an engineering capability that needs reviewable defaults.
+
+## The Core Mental Model
+
+Think of OpenClaw as a request pipeline:
+
+```text
+User -> Agent -> Model -> Tools -> Skills -> Memory
+```
+
+Each layer answers a different question:
+
+- User: what outcome is needed
+- Agent: how the task should be decomposed
+- Model: which reasoning or generation capability fits the task
+- Tools: what external actions are allowed
+- Skills: which repeatable workflow or domain knowledge should load
+- Memory: what should persist for later turns or runs
+
+## Suggested Learning Path
+
+1. Read installation and deployment so you can stand up a working environment.
+2. Build the first agent to see the request flow end to end.
+3. Tune basic configuration before changing advanced routing or memory rules.
+4. Move into architecture and model strategy once the basics are stable.
+
+## What To Verify Early
+
+Before you start writing advanced docs or custom skills, confirm these facts from your real OpenClaw environment:
+
+- repository URL and install command
+- actual config file names
+- supported model providers
+- gateway endpoint or proxy setup
+- production deployment constraints
+
+If these details are still unknown, keep placeholders explicit and avoid pretending the product already guarantees them.

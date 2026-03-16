@@ -1,0 +1,344 @@
+---
+title: OpenClaw 是什么
+description: 快速理解 OpenClaw 是否应该选择OpenClaw来完成你当前作业；初步了解核心架构、组件与运行方式。
+order: 1
+---
+
+
+## 这章适合谁
+
+如果你是第一次接触 OpenClaw，最容易卡住的通常不是某一条命令，而是根本不知道它到底是一个聊天工具、一个网关，还是一整套 Agent 运行系统。这一章就用“完全新手指南”的方式，先把全景图讲清楚，再告诉你第一步该怎么跑起来。
+
+读完这一章，你应该至少能回答下面这些问题：
+
+- OpenClaw 到底是什么，和普通聊天机器人有什么区别
+- 为什么它总在讲 `Gateway`、`Workspace` 和 `openclaw.json`
+- 新手装好之后，应该先验证什么、先配置什么
+- 后续的模型选择、Skill、Token 优化和安全，分别在体系里处于什么位置
+
+## 什么是 OpenClaw
+
+OpenClaw 是一款个人 AI 助手，运行在你自己的设备上。它可以通过你已经在使用的通讯渠道（WhatsApp、Telegram、Slack、Discord、Google Chat、Signal、iMessage、Microsoft Teams、WebChat 等）与你交互，还支持语音对话、Canvas 可视化等高级功能。
+
+OpenClaw 是一个本地优先的 AI 助手网关，它的核心设计理念是：
+
+- 个人化：为你个人服务，而非企业级多用户系统
+- 本地运行：Gateway 运行在你的设备上（macOS、Linux、Windows WSL2）
+- 多渠道接入：支持几乎所有主流通讯平台
+- 功能丰富：浏览器控制、Canvas 可视化、语音交互、定时任务  
+
+| 任务类型      | 示例                           | 更适合工具               | 为什么                    |
+| --------- | ---------------------------- | ------------------- | ---------------------- |
+| 问答 / 知识查询 | “Kafka consumer group 怎么工作？” | ChatGPT / Claude    | 单轮推理问题，不需要环境           |
+| 单文件代码修改   | 修改一个 Python 函数               | Claude Code / Codex | 只涉及局部代码                |
+| 文档或内容生成   | 写 README / 邮件 / PPT 文案       | ChatGPT / Claude    | 纯文本生成任务                |
+| 小型代码生成    | 写一个单页面 HTML / 小脚本            | Claude Code / Codex | 单任务代码生成                |
+| **工程型任务** | 搭一个 AI 自动化系统                 | **OpenClaw**        | 需要 workspace、工具调用、流程管理 |
+
+
+## 一张图看懂 OpenClaw
+
+```text
+飞书/Telegram / Discord / Slack / WebChat / CLI / Browser
+                         │
+                         ▼
+┌──────────────────────────────────────────┐
+               OpenClaw Gateway            
+         控制连接、路由、Agent 与模型调用    
+└──────────────────────┬───────────────────┘
+                       │
+         ┌─────────────┼─────────────┐
+         ▼             ▼             ▼
+      Agents         Tools         Skills
+         │             │             │
+         └─────────────┬─────────────┘
+                       ▼
+                    Memory
+```
+
+如果只先记一句话，那就是：**你不是在直接“和一个模型聊天”，而是在和一套有状态、有工具、有工作空间、有策略的 Agent 系统交互。**
+
+## 三个核心对象
+
+| 核心对象 | 你可以把它理解成什么 | 新手为什么一定要先懂 |
+| --- | --- | --- |
+| `Gateway` | OpenClaw 的核心运行入口 | 它负责启动、连接、接渠道、调模型和管理 Agent |
+| `Workspace` | 助手真正工作的目录 | 它保存上下文、长期记忆、Skill 和操作约束 |
+| `openclaw.json` | 系统行为的总配置文件 | 它定义默认模型、会话策略、Channel 规则和工作空间入口 |
+
+后面所有内容，几乎都只是这三件事的展开。
+
+
+## 系统要求
+- Node.js ≥ 22（必须）
+- 操作系统：macOS、Linux、Windows (WSL2)
+- 包管理器：npm、pnpm 或 bun
+
+
+## Workspace 是什么
+
+Workspace 可以理解成 OpenClaw 的“长期上下文目录”。Agent 在这里读规则、读用户偏好、读长期记忆，也在这里加载 Skills。
+
+一个典型的 `~/.openclaw/` 目录通常会长这样：
+
+```text
+~/.openclaw/
+├── openclaw.json
+├── workspace/
+│   ├── AGENTS.md
+│   ├── SOUL.md
+│   ├── TOOLS.md
+│   ├── IDENTITY.md
+│   ├── USER.md
+│   ├── MEMORY.md
+│   └── skills/
+├── agents/
+├── skills/
+└── credentials/
+```
+
+最值得先理解的几个文件是：
+
+| 文件 | 作用 | 新手什么时候最常改 |
+| --- | --- | --- |
+| `AGENTS.md` | 运行指令、连续性规则、关键工作约束 | 想让 Agent 更稳、更像你团队的工作方式时 |
+| `SOUL.md` | 语气、人设、边界 | 想控制表达风格时 |
+| `TOOLS.md` | 工具使用规则 | 想限制工具调用或补充环境说明时 |
+| `USER.md` | 用户背景、偏好、工作上下文 | 想让助手更懂你时 |
+| `MEMORY.md` | 长期记忆 | 想让系统持续继承历史信息时 |
+
+理解 Workspace 之后，你就会明白 OpenClaw 的重点不是“聊天记录堆积”，而是“让助手在一个有组织的工作目录里长期运行”。
+
+## `openclaw.json` 是什么
+
+`~/.openclaw/openclaw.json` 是系统最核心的配置文件。你可以把它看成 OpenClaw 的总开关：默认 Agent 用哪个 Workspace、默认走哪个模型、消息会话怎么切、哪个 Channel 开启、谁有权限发消息，基本都从这里控制。
+
+很多配置是用 JSON5 风格来写的，所以会比严格 JSON 更适合手工维护。
+
+### 一个最小可用配置
+
+```json
+{
+  "agents": {
+    "defaults": {
+      "workspace": "~/.openclaw/workspace"
+    }
+  },
+  "channels": {
+    "telegram": {
+      "enabled": true,
+      "botToken": "123456:ABC...",
+      "dmPolicy": "pairing",
+      "allowFrom": ["tg:123456789"]
+    }
+  }
+}
+```
+
+这个最小配置主要表达三件事：
+
+- 默认 Agent 从哪个 Workspace 读取上下文
+- 当前开启了哪个外部入口
+- 私聊消息的安全策略是什么
+
+### 一个更实用的默认 Agent 配置
+
+```json
+{
+  "agents": {
+    "defaults": {
+      "workspace": "~/.openclaw/workspace",
+      "model": {
+        "primary": "anthropic/claude-sonnet-4-5",
+        "fallbacks": ["openai/gpt-5.2"]
+      },
+      "heartbeat": {
+        "every": "30m",
+        "target": "last"
+      }
+    }
+  }
+}
+```
+
+这里最值得注意的是：
+
+- `workspace` 决定上下文、Skill 和长期记忆从哪里来
+- `model.primary` 设定默认主模型
+- `fallbacks` 给异常情况预留回退路径
+- `heartbeat` 允许 Agent 周期性自检、追踪或续推任务
+
+### 会话管理配置示例
+
+```json
+{
+  "session": {
+    "dmScope": "per-channel-peer",
+    "reset": {
+      "mode": "daily",
+      "atHour": 4,
+      "idleMinutes": 120
+    }
+  }
+}
+```
+
+很多新手一开始只关注模型，其实 `session` 一样重要。它决定“哪些消息会被当成同一段连续上下文”“什么时候该重置对话”，这直接影响稳定性和 Token 成本。
+
+## Channels 是怎么接进来的
+
+OpenClaw 的一个核心价值，就是把多个交互入口统一到同一套 Agent 系统里。常见入口可以是 Telegram、Discord、Slack、WebChat，后续再扩到浏览器或其他自动化入口。
+
+对新手来说，先记住两件事：
+
+- Channel 只是消息入口，不是系统本体
+- 安全策略必须和 Channel 一起配置，不能只追求“接上就能用”
+
+### 常见私聊策略
+
+| 策略 | 适合什么场景 | 风险和代价 |
+| --- | --- | --- |
+| `open` | 完全测试环境 | 最方便，但风险最高 |
+| `allowlist` | 明确知道只有谁能访问 | 安全性高，但要维护名单 |
+| `pairing` | 个人使用或小范围试用 | 平衡体验和安全，通常是更好的默认值 |
+
+### Telegram 示例
+
+```json
+{
+  "channels": {
+    "telegram": {
+      "enabled": true,
+      "botToken": "123456:ABC...",
+      "dmPolicy": "pairing",
+      "allowFrom": ["tg:123456789"]
+    }
+  }
+}
+```
+
+如果你后面要接 Feishu、Cloudflare Tunnel 或公网回调，那属于“安装与部署”章节里的进阶部署内容，这一章先把 Channel 的角色理解清楚就够了。
+
+## 多智能体要不要一开始就用
+
+可以用，但不建议一上来就把结构拉得太复杂。新手最好的顺序通常是：
+
+1. 先有一个主 Agent，确认入口、模型、工具链路都跑通
+2. 再根据任务拆出专门角色，例如研究、编码、执行、审校
+3. 最后再考虑模型路由和更复杂的协作策略
+
+一个简化的多 Agent 例子大概会是这样：
+
+```json
+{
+  "agents": {
+    "researcher": {
+      "workspace": "~/.openclaw/agents/researcher",
+      "model": { "primary": "openai/gpt-5.2" }
+    },
+    "coder": {
+      "workspace": "~/.openclaw/agents/coder",
+      "model": { "primary": "anthropic/claude-sonnet-4-5" }
+    }
+  }
+}
+```
+
+## Skill 在新手阶段怎么理解
+
+Skill 可以理解成“把某个可复用工作方法打包成一套局部规则和配套资源”。它不是简单的提示词片段，而更像一个可安装、可复用、可维护的能力模块。
+
+新手阶段不一定要马上自己写 Skill，但至少要知道两件事：
+
+- 你可以安装别人已经做好的 Skill
+- 你以后完全可以像这次一样，让 ChatGPT / Codex / Claude 帮你生成自己的 Skill 骨架
+
+### 安装现成 Skill 的一个常见路径
+
+```bash
+npm install -g clawhub
+clawhub search openclaw
+clawhub install <skill-name>
+```
+
+### 你会常用到的 Skill 管理命令
+
+```bash
+clawhub list
+clawhub update
+clawhub remove <skill-name>
+```
+
+### 新手常见的 Skill 方向
+
+- 文档生成与维护
+- 网页研究与信息整理
+- 代码审查与补丁生成
+- 多步骤自动化任务
+- 本地知识库检索和归档
+
+后面的 Skill 章节会分别讲线上安装和自己制作，这里先把概念建立起来。
+
+## 常用 CLI 命令速查
+
+```bash
+openclaw gateway status
+openclaw gateway start
+openclaw gateway stop
+openclaw gateway restart
+openclaw dashboard
+openclaw talk
+openclaw doctor
+```
+
+对于新手来说，这些命令基本覆盖了“查看状态、启动、重启、进入面板、直接对话、做诊断”几个最常见动作。
+
+## 安全起步：新手最容易忽略的事
+
+OpenClaw 很强，但也正因为它能调用模型、接外部入口、连工具、读上下文，所以安全问题不能后补。
+
+新手阶段最容易犯的几个错误是：
+
+- 先把机器人暴露到公网，再补权限控制
+- 把 API Key 直接写进共享文档或仓库
+- Channel 接上后没有设置 `allowlist` 或 `pairing`
+- 给工具权限过大，却没有限制执行边界
+
+一个更稳的思路是：
+
+- 默认按最小权限来开入口和工具
+- 能本地跑就先本地跑
+- 能白名单就不要默认开放
+- 把密钥放到专门的凭据位置，而不是散在 Markdown 或脚本里
+
+## 常见故障排查
+
+| 现象 | 先检查什么 | 常见原因 |
+| --- | --- | --- |
+| `openclaw` 命令不存在 | CLI 是否安装到当前环境 | PATH 没更新，或者装到了别的环境 |
+| Gateway 启动失败 | `openclaw gateway status` / `openclaw doctor` | 端口冲突、配置错误、依赖不完整 |
+| 渠道收不到消息 | Channel token、回调、权限策略 | token 配错、Webhook 没通、没有配对白名单 |
+| 模型调用失败 | 提供方配置、API Key、代理商可用性 | key 无效、路由错误、账户额度问题 |
+| 回复越来越乱、越来越贵 | `session`、`heartbeat`、上下文规模 | 会话不收敛、上下文过长、没做压缩或重置 |
+
+## 资源入口
+
+- OpenClaw 官方文档：https://docs.openclaw.ai/
+- ClawHub Skills 市场：https://clawhub.ai/
+- Vercel Skills：https://github.com/vercel-labs/skills
+- 更多使用场景：https://github.com/hesamsheikh/awesome-openclaw-usecases
+- OpenClaw CLI 指令：https://skill-deploy-wwjmzwrcj4.vercel.app/
+- Nodejs 官网：https://nodejs.org/zh-cn/download
+- 配置模型指令（Zai）：https://docs.openclaw.ai/providers/zai
+- 飞书开发者后台：https://open.feishu.cn/
+
+## 结论
+
+
+1. OpenClaw 不是单一聊天机器人，而是一套个人 AI 助手运行系统。
+2. `Gateway`、`Workspace`、`openclaw.json` 是新手最该先懂的三个核心对象。
+3. 先把本地最小链路跑通，再去接更多 Channel、更多 Agent 和更复杂的自动化。
+4. Skill、模型策略、Token 优化和安全都很重要，但它们应该建立在“基础链路稳定”之上。
+5. 真正开始长期使用时，配置纪律和安全边界往往和模型本身一样重要。
+
+下一章如果继续顺着走，就很自然会进入“安装与部署”，把本地运行、模型配置，以及像 Feishu + Cloudflare Tunnel 这样的进阶接入路径真正搭起来。

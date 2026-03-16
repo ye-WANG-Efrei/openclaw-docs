@@ -1,0 +1,52 @@
+---
+title: Production Deployment
+description: Run OpenClaw as a real service with staged environments, release discipline, observability, and rollback planning.
+order: 3
+---
+
+## Deployment Goals
+
+Production deployment is not only about uptime. It is about making model behavior, provider routing, tool permissions, and gateway policy observable enough that the team can change the system without losing control.
+
+## Reference Topology
+
+```text
+Users -> Web or API surface -> OpenClaw app -> Gateway -> Model providers or local runtimes
+                                     |
+                                     -> logging, traces, metrics, evaluation data
+```
+
+## Environment Strategy
+
+| Environment | Purpose | Rules |
+| --- | --- | --- |
+| local | fast iteration | mock or low-cost providers are acceptable |
+| staging | release verification | mirror production routing and permissions closely |
+| production | real traffic | strongest observability and approval rules |
+
+## Release Checklist
+
+1. verify model routing and fallbacks in staging
+2. confirm tool permissions match the intended release scope
+3. review gateway credentials and quotas
+4. check dashboards for latency, failures, and cost trends
+5. prepare a rollback path for config and routing changes
+
+## What To Observe
+
+At minimum, capture:
+
+- request count
+- success and failure rate
+- selected provider and model
+- token usage by workflow
+- tool usage frequency
+- gateway errors and fallbacks
+
+## Rollback Guidance
+
+Treat routing and permission changes like code releases. If a new model profile or gateway rule increases failures, be able to revert it without redeploying the entire application stack.
+
+## Final Advice
+
+The fastest way to lose trust in an agent system is to make it powerful before it is observable. In production, prefer transparency, safe defaults, and reversible changes over raw autonomy.

@@ -1,0 +1,49 @@
+---
+title: Security
+description: Protect tools, credentials, gateways, and prompts by treating OpenClaw as an operational system instead of only a chat interface.
+order: 2
+---
+
+## Common Risks
+
+| Risk | What goes wrong | Mitigation |
+| --- | --- | --- |
+| tool permission misuse | an agent can read, write, or execute more than intended | default deny, least privilege, explicit approvals |
+| API key exposure | credentials leak through logs, prompts, or repo files | secret management and redaction |
+| network exposure via gateway | the gateway becomes a weak point for traffic and secrets | auth, segmentation, environment isolation |
+| prompt injection | external content manipulates the model into unsafe actions | tool gating, source trust rules, output review |
+| memory poisoning | bad summaries or hostile facts persist into later runs | retention review and memory validation |
+
+## Security Baselines
+
+- keep powerful tools off by default
+- separate development and production credentials
+- log sensitive actions without logging secrets
+- require explicit review for external skills and scripts
+- treat retrieved web or user content as untrusted input
+
+## Prompt Injection Mitigations
+
+Do not rely on prompt wording alone. Add structural controls:
+
+- restrict what tools can be called
+- require confirmation before destructive actions
+- isolate network access where possible
+- tag untrusted context and keep it separate from operator instructions
+
+## Gateway Hardening
+
+A production gateway should have:
+
+- authentication
+- environment-specific credentials
+- per-route logging
+- rate limits or quotas
+- clear fallback behavior
+
+## Review Checklist
+
+- Which tools are the highest-risk capabilities?
+- Where are API keys stored and rotated?
+- Can untrusted documents influence tool use?
+- Does the gateway expose more than the application actually needs?

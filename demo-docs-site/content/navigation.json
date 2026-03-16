@@ -1,0 +1,58 @@
+{
+  "site": {
+    "title": "OpenClaw Docs",
+    "description": "A practical guide for deploying and engineering your personal AI assistant.",
+    "tagline": "Install, model selection, Skills, token optimization, and security"
+  },
+  "sections": [
+    {
+      "id": "guide",
+      "title": "",
+      "description": "",
+      "items": [
+        {
+          "title": "What is OpenClaw",
+          "slug": "guide/openclaw-quick-understanding",
+          "description": "Quickly understand OpenClaw's core concepts, Gateway runtime, and overall architecture.",
+          "order": 1
+        },
+        {
+          "title": "Installation & Deployment",
+          "slug": "guide/installation-and-deployment",
+          "description": "From environment setup to Gateway launch — complete local deployment and initial configuration.",
+          "order": 2
+        },
+        {
+          "title": "Model Selection",
+          "slug": "guide/model-selection",
+          "description": "Choose the right AI model and provider for your use case, and configure routing strategies.",
+          "order": 3
+        },
+        {
+          "title": "Skill System",
+          "slug": "guide/skill-system",
+          "description": "Install, create, and use Skills to extend your Agent's capabilities.",
+          "order": 4
+        },
+        {
+          "title": "Token Optimization",
+          "slug": "guide/token-optimization",
+          "description": "Systematically reduce OpenClaw running costs with QMD retrieval, local models, and smart billing.",
+          "order": 5
+        },
+        {
+          "title": "Security",
+          "slug": "guide/security",
+          "description": "Channel authorization, key management, and sandbox execution for a local-first security posture.",
+          "order": 6
+        },
+        {
+          "title": "Harness Engineering",
+          "slug": "guide/harness-engineering",
+          "description": "Engineer OpenClaw into a sustainable, production-ready AI assistant system.",
+          "order": 7
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,238 @@
+---
+title: Skill 体系
+description: 什么是 Skill、两种安装方式、以及如何用 AI 创建自己的 Skill。
+order: 4
+---
+
+## 什么是 Skill
+
+Skill 是 OpenClaw 的可插拔能力模块。本质上就是一个文件夹，里面放着一个 `SKILL.md`，告诉 Agent "什么时候触发、怎么执行、依赖哪些脚本和参考资料"。
+
+```text
+my-skill/
+├── SKILL.md          ← 核心：触发条件 + 执行流程
+├── agents/           ← 可选：不同模型的配置
+├── scripts/          ← 可选：自动化脚本
+├── references/       ← 可选：参考资料
+└── assets/           ← 可选：静态资源
+```
+
+**`SKILL.md` 最小格式：**
+
+```markdown
+---
+name: skill-name
+description: 这个 Skill 做什么事
+---
+
+# 执行说明
+
+当用户提出 XXX 请求时，按以下步骤执行……
+```
+
+### Skill 加载优先级
+
+OpenClaw 按以下顺序查找 Skill，越靠前优先级越高：
+
+| 优先级 | 路径 | 说明 |
+| --- | --- | --- |
+| 1（最高） | `<workspace>/skills/` | 当前项目专属 |
+| 2 | `~/.openclaw/skills/` | 全局共享（所有 Agent 可见） |
+| 3（最低） | 安装包内置 | 随 OpenClaw 自带 |
+
+同名 Skill 以高优先级版本为准。
+
+### Token 开销
+
+每个启用的 Skill 大约消耗 **24 个 token + 字段长度**，选 Skill 时注意按需启用。
+
+---
+
+## 安装方式一：线上拉取
+
+### ClawHub 市场
+
+[ClawHub](https://clawhub.ai) 是官方 Skill 市场，类似 npm，支持版本化、可搜索。
+
+```bash
+# 安装指定 Skill
+npx clawhub@latest install <skill-slug>
+
+# 或用全局安装的 clawhub CLI
+clawhub install baoyu-image-gen
+clawhub install <skill-slug> --version 1.2.3
+```
+
+安装后默认放到当前目录的 `./skills/` 文件夹。
+
+```bash
+# 查看已安装
+clawhub list
+
+# 更新单个
+clawhub update baoyu-image-gen
+
+# 更新全部
+clawhub update --all
+```
+
+### 从 GitHub 仓库安装
+
+也可以直接从 GitHub 克隆 Skill 仓库，比如：
+
+```bash
+# 参考仓库：baoyu 的 Skill 合集
+git clone https://github.com/JimLiu/baoyu-skills
+```
+
+克隆后把对应的 Skill 文件夹复制到你的 `~/.openclaw/skills/` 或项目的 `workspace/skills/` 目录下，重启 Gateway 即可生效。
+
+```bash
+cp -r baoyu-skills/image-gen ~/.openclaw/skills/
+openclaw gateway restart
+```
+
+---
+
+## 安装方式二：本地自建（用 AI 生成）
+
+视频 [36:21] 演示了用 AI 辅助创建 Skill 的完整流程。核心思路是：
+
+> 把需求描述给 ChatGPT / Claude，让它生成 `SKILL.md` 内容，然后用 `/skillscreate` 命令在 OpenClaw 里直接创建并部署。
+
+### 步骤一：用 ChatGPT 生成 SKILL.md 内容
+
+把你的需求告诉 ChatGPT，示例 Prompt：
+
+```
+我在使用 OpenClaw，需要一个 Skill，功能是：
+帮我自动生成文档站点，包含 Next.js 模板、侧边导航、MDX 内容页。
+请按照 AgentSkills 格式帮我写 SKILL.md，包含 frontmatter、执行流程和注意事项。
+```
+
+### 步骤二：用 /skillscreate 创建 Skill
+
+在 Claude Code / OpenClaw 里，使用内置的 `skillscreate` 命令：
+
+```bash
+/skillscreate
+```
+
+或直接告诉 Agent：
+
+```
+帮我创建一个新的 Skill，名字叫 my-weather-skill，
+功能是：当用户询问天气时，调用天气 API 返回结果。
+```
+
+Agent 会自动在 `~/.openclaw/skills/` 下创建好完整的 Skill 文件夹。
+
+### 步骤三：验证 Skill 加载
+
+```bash
+# 重启 Gateway 让新 Skill 生效
+openclaw gateway restart
+
+# 测试
+openclaw agent --message "测试我的新 skill"
+```
+
+---
+
+## 真实案例：openclaw-docsite-generator
+
+这个文档站本身就是用一个自建 Skill 生成的，Skill 名字叫 `openclaw-docsite-generator`。
+
+**Skill 描述：**
+
+> 生成完整的 OpenClaw 文档站，包含 Next.js 架构、结构化 MDX 内容、侧边导航和可复用模板。支持新建站点、扩展章节、同步导航。
+
+**目录结构：**
+
+```text
+openclaw-docsite-generator/
+├── SKILL.md
+├── agents/
+│   └── openai.yaml
+├── scripts/
+│   └── manage_docsite.py
+├── references/
+│   ├── docsite-blueprint.md
+│   └── page-templates.md
+└── assets/
+    └── next-docsite-template/
+```
+
+**触发方式（在 Agent 对话里直接说）：**
+
+```
+用 $openclaw-docsite-generator 帮我生成一个 OpenClaw 文档站
+```
+
+**SKILL.md frontmatter 片段：**
+
+```yaml
+---
+name: openclaw-docsite-generator
+description: Generate, expand, and maintain complete OpenClaw documentation websites
+  with a Next.js-style docs architecture, structured markdown or MDX content,
+  sidebar navigation, and reusable templates.
+---
+```
+
+**`manage_docsite.py` 脚本支持的操作：**
+
+```bash
+# 新建完整文档站
+python scripts/manage_docsite.py scaffold --output <目标目录>
+
+# 新增章节
+python scripts/manage_docsite.py add-section \
+  --site <目标目录> \
+  --section-id operations \
+  --title "Operations"
+
+# 新增页面
+python scripts/manage_docsite.py add-page \
+  --site <目标目录> \
+  --section advanced \
+  --slug gateway-observability \
+  --title "Gateway Observability"
+
+# 同步导航
+python scripts/manage_docsite.py sync-nav --site <目标目录>
+```
+
+---
+
+## 在 openclaw.json 里管理 Skill
+
+```json
+{
+  "skills": {
+    "entries": {
+      "my-skill": {
+        "enabled": true,
+        "env": {
+          "API_KEY": "your-key"
+        }
+      },
+      "old-skill": {
+        "enabled": false
+      }
+    }
+  }
+}
+```
+
+`enabled: false` 可以临时禁用某个 Skill 而不删除文件。
+
+---
+
+## 安全提示
+
+- 第三方 Skill 相当于第三方代码，安装前务必通读 `SKILL.md` 和 `scripts/` 目录
+- 检查 Skill 是否申请了不必要的工具权限（写文件、联网、执行脚本）
+- 通过 `env` 或 `apiKey` 注入的密钥只在主进程里，不要在 Prompt 里打印出来
+
+

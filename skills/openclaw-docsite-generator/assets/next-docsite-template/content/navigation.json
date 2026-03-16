@@ -1,0 +1,102 @@
+{
+  "site": {
+    "title": "__DOCSITE_TITLE__",
+    "description": "__DOCSITE_DESCRIPTION__",
+    "tagline": "__DOCSITE_TAGLINE__"
+  },
+  "sections": [
+    {
+      "id": "beginner",
+      "title": "Beginner",
+      "description": "Start with the mental model, installation path, and first working agent.",
+      "items": [
+        {
+          "title": "What is OpenClaw",
+          "slug": "beginner/introduction",
+          "description": "Understand why OpenClaw exists and where it fits.",
+          "order": 1
+        },
+        {
+          "title": "Installation and Deployment",
+          "slug": "beginner/installation-and-deployment",
+          "description": "Prepare the environment, configure providers, and launch the stack.",
+          "order": 2
+        },
+        {
+          "title": "First Agent",
+          "slug": "beginner/first-agent",
+          "description": "Build a minimal but complete OpenClaw workflow.",
+          "order": 3
+        },
+        {
+          "title": "Basic Configuration",
+          "slug": "beginner/basic-configuration",
+          "description": "Tune prompts, tools, models, and memory defaults.",
+          "order": 4
+        }
+      ]
+    },
+    {
+      "id": "advanced",
+      "title": "Advanced",
+      "description": "Design architecture, choose models deliberately, and grow the skill ecosystem.",
+      "items": [
+        {
+          "title": "Architecture",
+          "slug": "advanced/architecture",
+          "description": "Map the request flow from user input to memory.",
+          "order": 1
+        },
+        {
+          "title": "Model Strategy",
+          "slug": "advanced/model-strategy",
+          "description": "Choose the right model profile for each workload.",
+          "order": 2
+        },
+        {
+          "title": "Model Providers",
+          "slug": "advanced/model-providers",
+          "description": "Compare official APIs and aggregation layers.",
+          "order": 3
+        },
+        {
+          "title": "Skill Ecosystem",
+          "slug": "advanced/skill-ecosystem",
+          "description": "Install, review, and author reusable OpenClaw skills.",
+          "order": 4
+        },
+        {
+          "title": "Gateway Usage",
+          "slug": "advanced/gateway-usage",
+          "description": "Route, observe, and govern model traffic.",
+          "order": 5
+        }
+      ]
+    },
+    {
+      "id": "best-practices",
+      "title": "Best Practices",
+      "description": "Reduce cost, improve reliability, and ship safely.",
+      "items": [
+        {
+          "title": "Token Optimization",
+          "slug": "best-practices/token-optimization",
+          "description": "Control context size, retrieval quality, and model spend.",
+          "order": 1
+        },
+        {
+          "title": "Security",
+          "slug": "best-practices/security",
+          "description": "Protect tools, secrets, and network boundaries.",
+          "order": 2
+        },
+        {
+          "title": "Production Deployment",
+          "slug": "best-practices/production-deployment",
+          "description": "Operate OpenClaw with release discipline and observability.",
+          "order": 3
+        }
+      ]
+    }
+  ]
+}

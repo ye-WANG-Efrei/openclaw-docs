@@ -1,0 +1,264 @@
+﻿{
+  "source": {
+    "project": "ClawBot",
+    "path": "C:\\Users\\wwx1385281\\.openclaw\\ClawBot",
+    "generated_on": "2026-03-13",
+    "files": [
+      "README.md",
+      "Setup.md",
+      "tmux-codexcli.md",
+      "tokensave.summary.md"
+    ]
+  },
+  "canonical_replacements": {
+    "product_name": {
+      "preferred": "ClawBot",
+      "aliases": ["OpenClaw", "clawbot", "clawdbot"],
+      "note": "文档命名统一写 ClawBot。"
+    },
+    "cli_command": {
+      "preferred": "openclaw",
+      "note": "所有 CLI 与配置命令统一写 openclaw。"
+    },
+    "default_channels": ["Feishu", "CLI"],
+    "gateway_role": "本地智能体网关",
+    "webhook_path": "/feishu/events",
+    "local_feishu_webhook": "http://127.0.0.1:3000/feishu/events",
+    "public_feishu_webhook": "https://<your-domain>/feishu/events",
+    "default_ports": {
+      "gateway_ws": 18789,
+      "browser_control": 18791,
+      "feishu_webhook": 3000
+    },
+    "workspace_example": "C:\\Users\\<YOUR_USERNAME>\\.openclaw\\workspace",
+    "shared_codex_home_wsl": "/mnt/c/Users/wwx1385281/.codex"
+  },
+  "placeholder_map": [
+    {
+      "placeholder": "<product-name>",
+      "replacement": "ClawBot",
+      "source": ["README.md"]
+    },
+    {
+      "placeholder": "<cli-command>",
+      "replacement": "openclaw",
+      "source": ["README.md", "Setup.md"]
+    },
+    {
+      "placeholder": "<feishu-webhook-path>",
+      "replacement": "/feishu/events",
+      "source": ["README.md", "Setup.md"]
+    },
+    {
+      "placeholder": "<local-webhook-url>",
+      "replacement": "http://127.0.0.1:3000/feishu/events",
+      "source": ["README.md", "Setup.md"]
+    },
+    {
+      "placeholder": "<public-webhook-url>",
+      "replacement": "https://<your-domain>/feishu/events",
+      "source": ["README.md", "Setup.md"]
+    },
+    {
+      "placeholder": "<gateway-port>",
+      "replacement": "18789",
+      "source": ["Setup.md"]
+    },
+    {
+      "placeholder": "<browser-control-port>",
+      "replacement": "18791",
+      "source": ["Setup.md"]
+    },
+    {
+      "placeholder": "<feishu-webhook-port>",
+      "replacement": "3000",
+      "source": ["Setup.md"]
+    },
+    {
+      "placeholder": "<shared-codex-home>",
+      "replacement": "/mnt/c/Users/wwx1385281/.codex",
+      "source": ["tmux-codexcli.md"]
+    }
+  ],
+  "candidate_blocks": {
+    "positioning": [
+      {
+        "id": "positioning.local-gateway",
+        "preferred": true,
+        "zh": "ClawBot 是一个面向 Feishu 和 CLI 的本地智能体网关方案。",
+        "en": "ClawBot is a local agent gateway designed for Feishu and CLI workflows.",
+        "source": ["README.md"]
+      },
+      {
+        "id": "positioning.docs-repo",
+        "preferred": false,
+        "zh": "当前仓库主要保存架构说明、部署步骤和后续优化草案。",
+        "en": "The current repository mainly stores architecture notes, deployment steps, and follow-up optimization drafts.",
+        "source": ["README.md"]
+      }
+    ],
+    "architecture": [
+      {
+        "id": "architecture.summary",
+        "preferred": true,
+        "zh": "ClawBot Gateway 位于 Feishu 或 CLI 与底层模型、工具、Skill 之间，负责接入渠道、模型路由与能力编排。",
+        "en": "ClawBot Gateway sits between Feishu or CLI clients and the underlying models, tools, and skills, handling channel access, model routing, and capability orchestration.",
+        "source": ["README.md"]
+      },
+      {
+        "id": "architecture.model-router",
+        "preferred": true,
+        "zh": "默认模型路由示例包括 primary: qwen-portal、code: ollama/qwen2.5-coder、fallback: ollama/qwen2.5。",
+        "en": "The default model router example includes primary: qwen-portal, code: ollama/qwen2.5-coder, and fallback: ollama/qwen2.5.",
+        "source": ["README.md"]
+      },
+      {
+        "id": "architecture.tools-skills",
+        "preferred": true,
+        "zh": "核心工具可包括 shell、filesystem、web/http、search/docs；Skill 层可包括 openclaw-ops、deploy-helper、feishu-helper、log-troubleshooter。",
+        "en": "Core tools can include shell, filesystem, web/http, and search/docs; the skills layer can include openclaw-ops, deploy-helper, feishu-helper, and log-troubleshooter.",
+        "source": ["README.md"]
+      }
+    ],
+    "setup_installation": [
+      {
+        "id": "setup.install-command",
+        "preferred": true,
+        "zh": "PowerShell 安装命令可写为：iwr -useb https://molt.bot/install.ps1 | iex",
+        "en": "The PowerShell installation command can be documented as: iwr -useb https://molt.bot/install.ps1 | iex",
+        "source": ["Setup.md"]
+      },
+      {
+        "id": "setup.execution-policy",
+        "preferred": false,
+        "zh": "若安装脚本报错，可在当前会话临时放开脚本执行权限：Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process。",
+        "en": "If the install script fails, you can temporarily relax PowerShell execution policy for the current session: Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process.",
+        "source": ["Setup.md"]
+      },
+      {
+        "id": "setup.git-install",
+        "preferred": false,
+        "zh": "Git 可通过 winget install --id Git.Git -e --source winget 安装。",
+        "en": "Git can be installed with winget install --id Git.Git -e --source winget.",
+        "source": ["Setup.md"]
+      }
+    ],
+    "feishu_integration": [
+      {
+        "id": "feishu.permissions",
+        "preferred": true,
+        "zh": "飞书权限候选可包括 im:message、im:message.p2p_msg、im:message.group_at_msg、im:message.group_msg、im:chat。",
+        "en": "Candidate Feishu permissions include im:message, im:message.p2p_msg, im:message.group_at_msg, im:message.group_msg, and im:chat.",
+        "source": ["Setup.md"]
+      },
+      {
+        "id": "feishu.plugin-install",
+        "preferred": true,
+        "zh": "Feishu 插件安装命令可写为：openclaw plugins install @miheng-clawd/feishu。",
+        "en": "The Feishu plugin install command can be documented as: openclaw plugins install @miheng-clawd/feishu.",
+        "source": ["Setup.md"]
+      },
+      {
+        "id": "feishu.config-commands",
+        "preferred": true,
+        "zh": "飞书凭证配置命令候选：openclaw config set channels.feishu.appid \"<YOUR_APP_ID>\" 与 openclaw config set channels.feishu.appSecret \"<YOUR_APP_SECRET>\"。",
+        "en": "Candidate Feishu credential commands: openclaw config set channels.feishu.appid \"<YOUR_APP_ID>\" and openclaw config set channels.feishu.appSecret \"<YOUR_APP_SECRET>\".",
+        "source": ["Setup.md"]
+      },
+      {
+        "id": "feishu.pairing",
+        "preferred": false,
+        "zh": "私聊授权可通过 openclaw pairing approve feishu <PAIRING_CODE> 完成。",
+        "en": "Private chat authorization can be completed with openclaw pairing approve feishu <PAIRING_CODE>.",
+        "source": ["Setup.md"]
+      }
+    ],
+    "gateway_operations": [
+      {
+        "id": "gateway.restart-status",
+        "preferred": true,
+        "zh": "Gateway 运维命令候选：openclaw gateway restart 与 openclaw gateway status。",
+        "en": "Candidate gateway operations commands: openclaw gateway restart and openclaw gateway status.",
+        "source": ["Setup.md"]
+      },
+      {
+        "id": "gateway.local-mode",
+        "preferred": false,
+        "zh": "当网关未正常拉起时，可切换到本地模式：openclaw config set gateway.mode \"local\"。",
+        "en": "If the gateway does not start normally, you can switch it to local mode with openclaw config set gateway.mode \"local\".",
+        "source": ["Setup.md"]
+      }
+    ],
+    "cloudflare_tunnel": [
+      {
+        "id": "tunnel.summary",
+        "preferred": true,
+        "zh": "推荐链路是本地 Feishu webhook 先监听 127.0.0.1:3000，再通过 Cloudflare Tunnel 暴露到公网 HTTPS 地址供飞书事件订阅使用。",
+        "en": "The recommended path is to serve the local Feishu webhook on 127.0.0.1:3000 first, then expose it through Cloudflare Tunnel as a public HTTPS endpoint for Feishu event subscriptions.",
+        "source": ["README.md", "Setup.md"]
+      },
+      {
+        "id": "tunnel.install-run",
+        "preferred": true,
+        "zh": "Cloudflare Tunnel 常用命令候选：cloudflared tunnel login、cloudflared tunnel create openclaw、cloudflared tunnel route dns openclaw <YOUR_DOMAIN>、cloudflared tunnel run openclaw。",
+        "en": "Candidate Cloudflare Tunnel commands: cloudflared tunnel login, cloudflared tunnel create openclaw, cloudflared tunnel route dns openclaw <YOUR_DOMAIN>, and cloudflared tunnel run openclaw.",
+        "source": ["Setup.md"]
+      }
+    ],
+    "model_routing": [
+      {
+        "id": "routing.defaults",
+        "preferred": true,
+        "zh": "Agent 路由示例可以写成：defaults 使用 openrouter/anthropic/claude-3.7-sonnet，coder 使用 openrouter/openai/gpt-4o-mini，research 使用 openrouter/anthropic/claude-3.7-sonnet。",
+        "en": "An agent routing example can document defaults on openrouter/anthropic/claude-3.7-sonnet, coder on openrouter/openai/gpt-4o-mini, and research on openrouter/anthropic/claude-3.7-sonnet.",
+        "source": ["Setup.md"]
+      },
+      {
+        "id": "routing.agent-invocation",
+        "preferred": false,
+        "zh": "在聊天渠道中可通过 @coder 与 @research 这样的 agent 名称切换不同模型策略。",
+        "en": "In chat channels, agent names such as @coder and @research can be used to switch model strategies.",
+        "source": ["Setup.md"]
+      }
+    ],
+    "token_optimization": [
+      {
+        "id": "token.cost-breakdown",
+        "preferred": true,
+        "zh": "成本来源可拆成系统提示、工作区文件、对话历史、工具输出和当轮问题五部分。",
+        "en": "The cost breakdown can be split into five parts: system prompt, workspace files, conversation history, tool output, and the current-turn query.",
+        "source": ["tokensave.summary.md"]
+      },
+      {
+        "id": "token.qmd",
+        "preferred": true,
+        "zh": "QMD 按需知识注入适合作为文档站中“上下文优化”或“知识检索”章节的候选内容：通过本地索引与向量检索，只向模型注入命中的相关片段。",
+        "en": "QMD on-demand knowledge injection is a strong candidate for context optimization or knowledge retrieval sections: it uses local indexing and vector search to inject only the relevant matched snippets into the model.",
+        "source": ["tokensave.summary.md"]
+      },
+      {
+        "id": "token.heartbeat-local",
+        "preferred": true,
+        "zh": "本地小模型跑心跳可作为“自动化成本控制”章节候选内容：把低复杂度的定时检查交给本地模型，只在需要时再升级到更强模型。",
+        "en": "Running heartbeat tasks on a local small model is a good candidate for automation cost-control sections: handle low-complexity periodic checks locally and escalate only when needed.",
+        "source": ["tokensave.summary.md"]
+      }
+    ],
+    "operator_workflow": [
+      {
+        "id": "ops.wsl-tmux-codex",
+        "preferred": true,
+        "zh": "Windows 长期运维工作流的候选内容可采用 WSL + tmux + Codex CLI 组合，并共享 CODEX_HOME。",
+        "en": "A strong candidate for the long-term Windows operator workflow is the WSL + tmux + Codex CLI setup with a shared CODEX_HOME.",
+        "source": ["tmux-codexcli.md"]
+      },
+      {
+        "id": "ops.daily-layout",
+        "preferred": false,
+        "zh": "日常工作布局候选：pane 1 跑 codex，pane 2 跑测试，pane 3 跑服务或查看日志。",
+        "en": "Candidate daily layout: pane 1 for codex, pane 2 for tests, and pane 3 for services or logs.",
+        "source": ["tmux-codexcli.md"]
+      }
+    ]
+  }
+}

@@ -1,0 +1,79 @@
+---
+title: Installation and Deployment
+description: Prepare the runtime, configure providers, and launch an initial OpenClaw environment with clear placeholders for repository-specific commands.
+order: 2
+---
+
+## System Requirements
+
+| Requirement | Recommended baseline | Why it matters |
+| --- | --- | --- |
+| OS | macOS, Linux, or modern Windows | Needed for local development and deployment tooling |
+| Node.js | 20+ | Common baseline for modern web and tooling stacks |
+| Python | 3.11+ | Useful for scripts, skills, and local utilities |
+| Git | Current version | Required for repository checkout and skill maintenance |
+| Provider access | At least one model API key | Needed to run real agent tasks |
+
+## Quick Start Commands
+
+Use these as starter commands until the real OpenClaw repository instructions are confirmed:
+
+```bash
+git clone <openclaw-repo-url>
+cd openclaw
+cp .env.example .env.local
+pnpm install
+pnpm dev
+```
+
+If the project uses `npm`, `bun`, Docker, or another runtime, replace the package manager and startup command with the verified project standard.
+
+## Environment Configuration
+
+A practical starter `.env.local` usually needs provider credentials and runtime defaults:
+
+```env
+OPENAI_API_KEY=<your-openai-key>
+ANTHROPIC_API_KEY=<your-anthropic-key>
+OPENROUTER_API_KEY=<your-openrouter-key>
+OPENCLAW_DEFAULT_MODEL=<your-default-model>
+OPENCLAW_LOG_LEVEL=info
+OPENCLAW_GATEWAY_URL=<gateway-url-if-used>
+```
+
+Only keep the variables that are actually supported by the project. Remove placeholders once the repository exposes an authoritative config surface.
+
+## Model Setup
+
+Choose one provider first so the initial setup stays narrow.
+
+- Use an official provider when you want the shortest support path.
+- Use an aggregator when you want broad model choice behind one key.
+- Use local models only after the basic cloud path already works.
+
+## Gateway Setup
+
+If OpenClaw routes traffic through a gateway or proxy, document it as a separate concern instead of hiding it inside the default install path.
+
+```env
+OPENCLAW_GATEWAY_URL=https://gateway.example.com
+OPENCLAW_GATEWAY_TOKEN=<service-token>
+```
+
+A gateway is useful when you need centralized routing, audit logging, rate limits, or cross-provider policy enforcement.
+
+## Deployment Checklist
+
+Before calling the installation complete, verify:
+
+- the app boots without missing environment variables
+- a simple model request succeeds
+- logs show which provider and model were selected
+- tool permissions are visible and reviewable
+- the gateway path works if traffic should not hit providers directly
+
+## Common Mistakes
+
+- Mixing placeholder keys with real keys and assuming the runtime will ignore them.
+- Testing multiple providers at once before the first one is stable.
+- Deploying the web app without verifying the backend gateway or tool access path.

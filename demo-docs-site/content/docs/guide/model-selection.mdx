@@ -1,0 +1,189 @@
+---
+title: Model Selection
+description: A two-dimensional look at the growing landscape of model choices — recommended by use case and by cost strategy
+order: 3
+---
+
+
+## 1. The Mainstream Model Ecosystem
+The major models in the world today come roughly from these vendors:
+
+| Vendor | Representative models |
+| --- | --- |
+| OpenAI | GPT-4 / GPT-5 / o3 |
+| Anthropic | Claude Sonnet / Opus |
+| Google | Gemini Pro / Flash |
+| Moonshot | Kimi |
+| xAI | Grok |
+| DeepSeek | DeepSeek-V3 / R1 |
+| Meta | Llama |
+| Alibaba | Qwen |
+| Mistral | Mistral Large |
+| Cohere | Command R |
+
+
+## 2. Recommended Models by Use Case
+
+| Use case | Recommended model | Reason |
+| --- | --- | --- |
+| Writing code | Claude / OpenAI GPT | Claude has consistently led coding benchmarks |
+| Writing docs / presentations | GPT / Claude / Kimi | Strong language expression and summarization |
+| Data analysis | GPT / Gemini | Strong reasoning and structured output |
+| Agent / automation | Claude / DeepSeek | Strong tool-calling capabilities |
+| Chinese-language content | Kimi / Qwen | Advantage in Chinese training data |
+| Research / long-document summarization | Claude / Gemini | Ultra-long context (millions of tokens) |
+| Low-latency tasks | Gemini Flash | Low cost, fast speed |
+
+> A personal note: recently using OpenAI feels noticeably worse than Claude. OpenAI gives the impression of a task that always stalls at 99% completion.
+> So at the same price point, I'd recommend `Claude`.
+
+### The Role of OpenRouter in Model Selection
+If you are building Agents or doing development, you typically won't stick to a single model.
+
+**OpenRouter's purpose is to unify the model interface.**
+
+It lets you:
+
+- Use a single API
+- Access 400+ models
+- Automatic fallback
+- Automatic routing
+
+For example:
+```
+OpenRouter
+   ├ Claude
+   ├ GPT
+   ├ Gemini
+   ├ DeepSeek
+   ├ Llama
+   └ Qwen
+```
+Benefits:
+- No need to integrate 10 separate APIs
+- Seamless model switching
+
+## 3. Recommended Models by Cost
+
+Many people care most about **pricing / free tier**.
+Based on real-world usage, model choices can be grouped into three categories: **free trials, low-cost models, and high-performance models (best value)**.
+
+---
+
+### 1. Free-Trial Models (Great for Getting Started)
+
+Many platforms offer a free tier or a pool of free models — ideal for learning, testing projects, or building small tools.
+
+| Model | How it's free |
+|---|---|
+| DeepSeek | Free API |
+| Qwen | Free quota |
+| Llama | Open-source model |
+| Kimi | Free quota |
+| OpenRouter Free | Free model pool |
+
+OpenRouter itself provides a **free model routing** option, for example:
+
+- DeepSeek
+- Llama
+- Qwen
+
+These models can generally be used at **zero cost (with rate limits)**.
+
+**Best for:**
+
+- Learning and testing
+- Prototype development
+- Small tool projects
+
+---
+
+### 2. Low-Cost Models
+
+If you are working on **personal projects or small-scale Agents**, prioritize low-cost models.
+
+| Model | Characteristics |
+|---|---|
+| DeepSeek | Extremely low cost |
+| Gemini Flash | Fast speed, low price |
+| Qwen | Strong Chinese capability, low price |
+| Llama | Can be deployed locally |
+
+**Characteristics:**
+
+- Cost is typically **1/5 or less** compared to GPT / Claude
+- Ideal for high-frequency call scenarios
+
+---
+
+### 3. High-Performance Models (Best Value)
+
+If your goal is to:
+
+- Build a product
+- Run AI Agents
+- Develop complex systems
+
+Then high-performance models are recommended.
+
+| Model | Value |
+|---|---|
+| Claude Sonnet | High output quality |
+| GPT | Mature ecosystem |
+| Gemini Pro | Long-context support |
+| DeepSeek V3 | Low cost, strong capability |
+
+Many developers use a combination like this:
+
+```text
+Primary model
+Claude / GPT
+
+fallback
+DeepSeek / Ollama (local model)
+```
+This way:
+
+- Quality is maintained
+
+- Costs are controlled
+
+## Routing Heuristics
+
+Start with simple rules before building anything complex:
+
+- For code rewriting or repository analysis, prioritize coder-tier models
+- When reading large amounts of material, prioritize long-context or strong-summarization models
+- For periodic automation tasks, prioritize the smallest model that meets the quality threshold
+- When private data cannot leave your boundary, prioritize local or privately deployed models
+
+## Example Policy
+
+```yaml
+routes:
+  - when: task_type == "coding"
+    use: coder-primary
+  - when: task_type == "research"
+    use: research-primary
+  - when: task_type == "automation"
+    use: low-cost-runner
+  - when: task_type == "private-indexing"
+    use: local-context-model
+fallback: reasoning-default
+```
+
+## Measure First, Then Scale Models
+
+Before introducing more models, at minimum track:
+
+- Task success rate
+- Average latency
+- Average token cost
+- Human rework rate
+- Failure rate by task type
+
+## Common Anti-Patterns
+
+- Running all tasks on the single most expensive model
+- Adding more providers before properly measuring the current routing strategy
+- Selecting models based on popularity rather than task evidence

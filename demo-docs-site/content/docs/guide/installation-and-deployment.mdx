@@ -1,0 +1,400 @@
+---
+title: Installation and Deployment
+description: Install OpenClaw, start the Gateway, and complete initial environment configuration
+order: 2
+---
+
+Before diving into OpenClaw, let's first get clear on its fundamental runtime structure.
+
+The core of OpenClaw is a local service process called the **Gateway**. All of your message channels, Agent conversations, and tool calls flow through it for unified orchestration. Our goal is simple: **get the Gateway running and the Workspace configured** — everything else builds on top of that foundation.
+
+---
+
+## 1. System Requirements
+
+Before starting, confirm that your basic runtime environment is ready. OpenClaw is a Node.js-based tool, so the requirements are straightforward:
+
+| Item | Requirement | Notes |
+| --- | --- | --- |
+| Node.js | 22 or above | Required — older versions will produce errors |
+| Operating system | macOS, Linux, Windows (WSL2) | Windows users should use WSL2; native PowerShell is also supported for installation |
+| Package manager | npm, pnpm, or bun | Any one of these will work |
+
+> If you are unsure of your Node.js version, run `node -v` to check. An incorrect version is one of the most common causes of installation failure for new users.
+
+---
+
+## 2. Installing OpenClaw
+
+There are three installation methods — choose the one that fits your system.
+
+### macOS / Linux
+
+```bash
+curl -fsSL https://openclaw.ai/install.sh | bash
+```
+
+### Windows PowerShell
+
+```powershell
+iwr -useb https://openclaw.ai/install.ps1 | iex
+```
+
+### Using npm / pnpm to install the CLI
+
+If you prefer a package manager, you can also install globally:
+
+```bash
+npm install -g openclaw@latest
+
+# or
+pnpm add -g openclaw@latest
+```
+
+After installation, run the setup wizard to complete the initial configuration:
+
+```bash
+openclaw onboard --install-daemon
+
+# or run only the config wizard without installing the daemon
+openclaw onboard
+```
+
+The `--install-daemon` flag registers the Gateway as a system background service that starts automatically on boot. If you just want to try it out first, omitting this flag is fine.
+
+---
+
+## 3. Verifying the Installation
+
+After installation, use these two commands to confirm the status:
+
+```bash
+openclaw gateway status
+openclaw dashboard
+```
+
+- `gateway status` tells you whether the Gateway is currently running
+- `dashboard` opens the control panel in your browser
+
+If neither command returns an error, the basic environment is ready.
+
+---
+
+## 4. Starting the Gateway
+
+The Gateway has two running modes — choose based on your situation:
+
+```bash
+# Foreground debug mode (logs are visible, good for initial troubleshooting)
+openclaw gateway --port 18789 --verbose
+
+# Background daemon mode (for regular use)
+openclaw gateway start
+```
+
+Once the Gateway is running, you can also open the control panel directly in your browser:
+
+```text
+http://127.0.0.1:18789
+```
+
+To verify the Agent is working correctly, send a test message:
+
+```bash
+openclaw agent --message "Summarize today's meeting" --thinking high
+```
+
+---
+
+## 5. Understanding the Workspace
+
+Many newcomers skip this step, but the Workspace is actually one of OpenClaw's most central concepts — it's worth spending a few minutes on.
+
+**The Workspace is the Agent's working directory.** Reading context, saving memory, and executing tool operations all happen inside this directory. The vast majority of your Agent behavior customization is done by modifying files within the Workspace.
+
+### Workspace Directory Structure
+
+```text
+~/.openclaw/
+├── openclaw.json          ← Core configuration file
+├── workspace/
+│   ├── AGENTS.md          ← Operational instructions and memory
+│   ├── SOUL.md            ← Persona and tone definitions
+│   ├── TOOLS.md           ← Tool usage instructions
+│   ├── IDENTITY.md        ← Assistant identity information
+│   ├── USER.md            ← User information and preferences
+│   ├── MEMORY.md          ← Long-term memory
+│   └── skills/            ← Skill modules
+├── agents/
+├── skills/
+└── credentials/
+```
+
+### Core File Descriptions
+
+These files are automatically loaded at the start of every session and directly determine how the Agent behaves:
+
+| File | Purpose | When it loads |
+| --- | --- | --- |
+| `AGENTS.md` | Operational instructions, continuity rules, important memory | First message of each session |
+| `SOUL.md` | Persona definition, tone, boundaries | First message of each session |
+| `TOOLS.md` | Environment-specific tool instructions | First message of each session |
+| `USER.md` | User information, preferences, project background | First message of each session |
+| `IDENTITY.md` | Assistant identity info (name, emoji, avatar) | First message of each session |
+| `MEMORY.md` | Long-term memory | Main session only |
+
+> These are all ordinary Markdown files. Edit them with any text editor — the changes take effect the next time a session starts.
+
+---
+
+## 6. Configuring openclaw.json
+
+`~/.openclaw/openclaw.json` is OpenClaw's main configuration file, written in JSON5 format (supports comments and trailing commas).
+
+Let's start with the minimal configuration and gradually understand what each part does.
+
+### Minimal Configuration
+
+```json
+{
+  "agents": {
+    "defaults": {
+      "workspace": "~/.openclaw/workspace"
+    }
+  },
+  "channels": {
+    "telegram": {
+      "enabled": true,
+      "botToken": "123456:ABC...",
+      "dmPolicy": "pairing",
+      "allowFrom": ["tg:123456789"]
+    }
+  }
+}
+```
+
+### Configuring Models and Heartbeat
+
+One thing worth noting: `heartbeat` is OpenClaw's scheduled wake-up mechanism for advancing long-running tasks. In your config you can specify both a primary model and fallback models:
+
+```json
+{
+  "agents": {
+    "defaults": {
+      "workspace": "~/.openclaw/workspace",
+      "model": {
+        "primary": "anthropic/claude-sonnet-4-5",
+        "fallbacks": ["openai/gpt-5.2"]
+      },
+      "heartbeat": {
+        "every": "30m",
+        "target": "last"
+      }
+    }
+  }
+}
+```
+
+### Session Management
+
+Session scope and reset rules can also be controlled uniformly in the configuration:
+
+```json
+{
+  "session": {
+    "dmScope": "per-channel-peer",
+    "reset": {
+      "mode": "daily",
+      "atHour": 4,
+      "idleMinutes": 120
+    }
+  }
+}
+```
+
+---
+
+## 7. Configuring Messaging Channels
+
+OpenClaw supports multiple messaging channels. For direct message (DM) access, you need to choose a security policy. There are four modes — it's recommended to start with `pairing`:
+
+| Policy | Description | Use case |
+| --- | --- | --- |
+| `pairing` | Unknown senders receive a pairing code and need your approval | **Default recommendation, most secure** |
+| `allowlist` | Only allows senders on the whitelist | Known contacts |
+| `open` | Allows all inbound DMs | Public bots |
+| `disabled` | Ignores all DMs | Group-only use |
+
+### Telegram Configuration Example
+
+```json
+{
+  "channels": {
+    "telegram": {
+      "enabled": true,
+      "botToken": "your-bot-token",
+      "dmPolicy": "pairing",
+      "allowFrom": ["tg:123456789"],
+      "streaming": "partial"
+    }
+  }
+}
+```
+
+---
+
+## 8. Configuring Multiple Agents (Multi-Agent)
+
+When you need different Agents for different scenarios, you can define multiple Agents in the configuration, each with its own independent Workspace:
+
+```json
+{
+  "agents": {
+    "defaults": {
+      "workspace": "~/.openclaw/workspace"
+    },
+    "list": [
+      {
+        "id": "main",
+        "description": "General-purpose assistant"
+      },
+      {
+        "id": "coder",
+        "workspace": "~/.openclaw/workspace-coder",
+        "description": "Coding expert"
+      }
+    ]
+  }
+}
+```
+
+---
+
+## 9. Installing Skills
+
+Skills are OpenClaw's capability extension modules. Once installed, the Agent automatically learns to use the corresponding tools.
+
+```bash
+# Install the ClawHub CLI
+npm install -g clawhub
+
+# Search for skills
+clawhub search "image generation"
+clawhub search "weather"
+
+# Install a skill
+clawhub install baoyu-image-gen
+```
+
+| Command | Description |
+| --- | --- |
+| `clawhub list` | List installed skills |
+| `clawhub update <skill>` | Update a specific skill |
+| `clawhub update --all` | Update all skills |
+| `clawhub update --force` | Force update, use when resolving version conflicts |
+
+---
+
+## 10. Common CLI Commands Quick Reference
+
+### Gateway Management
+
+```bash
+openclaw gateway status   # Check current gateway status
+openclaw gateway start
+openclaw gateway stop
+openclaw gateway restart
+```
+
+### Configuration Management
+
+```bash
+openclaw onboard
+openclaw config get agents.defaults.workspace
+openclaw config set agents.defaults.model.primary "openai/gpt-5.2"
+```
+
+### Diagnostic Tools
+
+When something goes wrong, run `doctor` first — it can automatically detect most common configuration problems:
+
+```bash
+openclaw doctor
+openclaw doctor --fix
+openclaw logs --follow
+```
+
+---
+
+## 11. Security Best Practices
+
+### Multi-User Environments
+
+If multiple people share the same OpenClaw instance, make sure to set session isolation to prevent context from leaking between users:
+
+```json
+{
+  "session": {
+    "dmScope": "per-channel-peer"
+  }
+}
+```
+
+### Sandbox Execution
+
+For operations that involve running scripts, it is recommended to enable sandbox mode to limit the Agent's operational scope:
+
+```json
+{
+  "agents": {
+    "defaults": {
+      "sandbox": {
+        "mode": "non-main",
+        "scope": "agent"
+      }
+    }
+  }
+}
+```
+
+---
+
+## 12. Troubleshooting
+
+When something goes wrong, use this table to quickly locate the issue:
+
+| Error | Cause | Solution |
+| --- | --- | --- |
+| `Config validation failed` | Configuration format error | Run `openclaw doctor` |
+| `Unauthorized` | API Key is invalid | Check the `auth` configuration |
+| `Session not found` | Session has expired | Send `/new` to reset the session |
+
+---
+
+## Resources
+
+- Website: `openclaw.ai`
+- Documentation: `docs.openclaw.ai`
+- GitHub: `github.com/openclaw/openclaw`
+- Discord: `discord.gg/clawd`
+- Skill marketplace: `clawhub.com`
+
+---
+
+## Summary
+
+After completing this chapter, you should now have:
+
+1. **Gateway** is the system's scheduling core — all operations pass through it.
+2. **Workspace** is the Agent's working root directory — behavior customization starts here.
+3. **`openclaw.json`** controls models, channels, sessions, sandboxes, and all major behavior.
+4. Security-first by default — `pairing` mode is the safest DM access method.
+5. Multi-agent setups and Skills can be expanded on demand at any time.
+
+---
+
+## Advanced Deployment
+
+If you need to connect OpenClaw to Feishu and expose a public webhook via Cloudflare Tunnel, refer to the advanced deployment guide (which also includes solutions for common bugs):
+
+[***Advanced: Full Feishu + Cloudflare Tunnel Deployment***](https://github.com/ye-WANG-Efrei/ClawBot/blob/main/Setup.md)

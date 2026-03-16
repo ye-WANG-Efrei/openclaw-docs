@@ -1,0 +1,189 @@
+---
+title: 模型选择
+description: 分成两个维度介绍市面上日益增多的模型选择：使用场景推荐 和 成本策略推荐 
+order: 3
+---
+
+
+## 一，主流生态模型  
+当前全球主流模型大致来自这些厂商：
+
+| 厂商        | 代表模型                 |
+| --------- | -------------------- |
+| OpenAI    | GPT-4 / GPT-5 / o3   |
+| Anthropic | Claude Sonnet / Opus |
+| Google    | Gemini Pro / Flash   |
+| Moonshot  | Kimi                 |
+| xAI       | Grok                 |
+| DeepSeek  | DeepSeek-V3 / R1     |
+| Meta      | Llama                |
+| Alibaba   | Qwen                 |
+| Mistral   | Mistral Large        |
+| Cohere    | Command R            |
+
+
+## 二，按使用场景推荐模型
+
+| 使用场景        | 推荐模型                | 原因                  |               
+| ----------- | ------------------- | ------------------- | 
+| 写代码         | Claude / OpenAI GPT | Claude 在代码基准测试中长期领先 |
+| 写文档 / PPT   | GPT / Claude / Kimi | 语言表达和总结能力强          |
+| 数据分析        | GPT / Gemini        | 推理和结构化能力强           |
+| Agent / 自动化 | Claude / DeepSeek   | 工具调用能力强             |              
+| 中文内容        | Kimi / Qwen         | 中文语料优势              |               
+| 研究 /长文总结    | Claude / Gemini     | 超长上下文（百万 token）     |               
+| 低延迟任务       | Gemini Flash        | 成本低、速度快             | 
+
+> 题外话：最近使用OpenAI感觉明显不如Claude，OpenAI给人的感觉像是拼多多砍一刀，总是停留在任务的99%  
+> 所以同等价位下 我更推荐`Claude`
+
+### OpenRouter 在模型选择中的作用
+如果你做 Agent 或开发，通常不会只用一个模型。
+
+**OpenRouter 的作用就是统一模型接口。**
+
+它允许你：
+
+- 一个 API
+- 调用 400+ 模型
+- 自动 fallback
+- 自动路由
+
+例如：
+```
+OpenRouter
+   ├ Claude
+   ├ GPT
+   ├ Gemini
+   ├ DeepSeek
+   ├ Llama
+   └ Qwen
+```
+好处：
+- 不需要单独接 10 个 API
+- 可以自动切换模型
+
+## 三、按成本推荐模型
+
+很多人最关心的是 **价格 / 免费额度**。  
+根据实际使用情况，可以把模型选择分成三类：**免费试用、低成本模型、高性能模型（性价比）**。
+
+---
+
+### 1 免费试用模型（适合刚开始）
+
+很多平台会提供一定的免费额度或免费模型池，适合新手学习、测试项目或搭建小工具。
+
+| 模型 | 免费方式 |
+|---|---|
+| DeepSeek | 免费 API |
+| Qwen | 免费额度 |
+| Llama | 开源模型 |
+| Kimi | 免费额度 |
+| OpenRouter Free | 免费模型池 |
+
+OpenRouter 本身提供 **免费模型路由**，例如：
+
+- DeepSeek  
+- Llama  
+- Qwen  
+
+这些模型通常可以 **0 成本使用（存在速率限制）**。
+
+**适合场景：**
+
+- 学习和测试
+- 原型开发
+- 小工具项目
+
+---
+
+### 2 低成本模型
+
+如果你在做 **个人项目或小规模 Agent**，建议优先选择低成本模型。
+
+| 模型 | 特点 |
+|---|---|
+| DeepSeek | 成本非常低 |
+| Gemini Flash | 速度快、价格低 |
+| Qwen | 中文能力强、价格低 |
+| Llama | 可本地部署 |
+
+**特点：**
+
+- 成本通常只有 GPT / Claude 的 **1/5 或更低**
+- 适合高频调用场景
+
+---
+
+### 3 高性能模型（性价比）
+
+如果你的目标是：
+
+- 构建产品
+- 运行 AI Agent
+- 开发复杂系统
+
+推荐选择高性能模型。
+
+| 模型 | 性价比 |
+|---|---|
+| Claude Sonnet | 输出质量高 |
+| GPT | 生态成熟 |
+| Gemini Pro | 支持长上下文 |
+| DeepSeek V3 | 成本低、能力强 |
+
+很多开发者会使用如下组合：
+
+```text
+主模型
+Claude / GPT
+
+fallback
+DeepSeek / Ollama（本地模型）
+```
+这样：
+
+- 保证质量
+
+- 控制成本
+
+## 路由启发式
+
+可以先从简单规则开始：
+
+- 只要是代码改写或仓库分析，优先进入 coder 型模型档位
+- 需要阅读大量资料时，优先长上下文或总结强的模型
+- 周期性自动化任务，优先选择满足质量门槛的最小模型
+- 私有数据不能出边界时，优先本地或私有部署模型
+
+## 示例策略
+
+```yaml
+routes:
+  - when: task_type == "coding"
+    use: coder-primary
+  - when: task_type == "research"
+    use: research-primary
+  - when: task_type == "automation"
+    use: low-cost-runner
+  - when: task_type == "private-indexing"
+    use: local-context-model
+fallback: reasoning-default
+```
+
+## 先量化，再扩模型
+
+在引入更多模型前，至少监控：
+
+- 任务成功率
+- 平均延迟
+- 平均 token 成本
+- 人工返工率
+- 各任务类型的失败率
+
+## 常见反模式
+
+- 一个最贵模型跑所有任务
+- 还没测清当前路由策略就继续加提供方
+- 依据流行度，而不是依据任务证据来选模型
