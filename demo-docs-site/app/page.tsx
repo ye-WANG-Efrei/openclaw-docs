@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { CroissantLogo } from "@/components/logo";
+import { StatsRow } from "@/components/stats-row";
 import { getNavigation } from "@/lib/docs";
 import { buildLanguageHref, getDictionary } from "@/lib/i18n";
 
@@ -24,7 +26,9 @@ export default function HomePage() {
     <main className="home-shell">
       <header className="home-topbar">
         <Link className="brand-lockup" href={buildLanguageHref("/", language)}>
-          <span className="brand-badge">OC</span>
+          <span className="brand-badge">
+            <CroissantLogo size={38} />
+          </span>
           <div className="brand-copy">
             <strong>{navigation.site.title}</strong>
             <p>{navigation.site.tagline}</p>
@@ -45,60 +49,14 @@ export default function HomePage() {
         </div>
       </header>
 
-      <section className="hero-surface">
-        <div className="hero-layout">
-          <div className="hero-copy-column">
-            <p className="eyebrow">{labels.heroEyebrow}</p>
-            <h1>{navigation.site.title}</h1>
-            <p className="hero-copy">{navigation.site.description}</p>
-            <div className="hero-actions">
-              <Link
-                className="primary-action"
-                href={
-                  featuredGuide
-                    ? buildLanguageHref(`/docs/${featuredGuide.slug}`, language)
-                    : buildLanguageHref("/docs", language)
-                }
-              >
-                {labels.startReading}
-              </Link>
-            </div>
-            <div className="hero-meta-grid">
-              <article className="hero-meta-card">
-                <span>{labels.guideOutlineLabel}</span>
-                <strong>
-                  {totalPages} {labels.pagesLabel}
-                </strong>
-                <p>{navigation.site.tagline}</p>
-              </article>
-              <article className="hero-meta-card">
-                <span>{labels.coverageLabel}</span>
-                <strong>{navigation.site.tagline}</strong>
-                <p>{navigation.site.description}</p>
-              </article>
-              <article className="hero-meta-card">
-                <span>{labels.featuredGuideLabel}</span>
-                <strong>{featuredGuide?.title ?? navigation.site.title}</strong>
-                <p>{navigation.site.description}</p>
-              </article>
-            </div>
-          </div>
-
-          <aside className="guide-card">
-            <p className="section-label">{labels.guideOutlineLabel}</p>
-            <h2>{navigation.site.title}</h2>
-            <p className="guide-card-copy">{navigation.site.tagline}</p>
-            <ol className="hero-outline">
-              {(flatChapters ?? navigation.sections.flatMap((section) => section.items)).map((item) => (
-                <li key={item.slug}>
-                  <div>
-                    <strong>{item.title}</strong>
-                    {item.description ? <p>{item.description}</p> : null}
-                  </div>
-                </li>
-              ))}
-            </ol>
-          </aside>
+      <section className="mission-surface">
+        <div className="mission-inner">
+          <h2 className="mission-headline">
+            <span className="mission-line">让开发者看清</span>
+            <span className="mission-line">AI 的方向，</span>
+            <span className="mission-line-fade">构建属于你的 Agent。</span>
+          </h2>
+          <StatsRow articleCount={totalPages} lang="zh" />
         </div>
       </section>
 

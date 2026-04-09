@@ -1,0 +1,291 @@
+---
+title: Claude Code 源码拆解
+description: 从 Claude Code 的源码出发，深入理解一个生产级 AI 编程工具的 Agent 循环、工具系统、记忆架构、上下文压缩与安全设计
+order: 9
+---
+
+理解 Harness Engineering 最好的方式之一，是直接看一个已经在生产环境里大规模运行的 Agent 系统是怎么设计的。
+
+Claude Code 是目前最成熟的 AI 编程工具之一，它的源码以 npm 包的形式公开发布（`@anthropic-ai/claude-code`，约 59.8MB）。通过阅读这份源码，可以清楚地看到：一个生产级 Agent 系统在每一个核心问题上是怎么做工程决策的。
+
+这篇文章拆解其中最关键的几个设计。
+
+---
+
+## 一、Agent 主循环（query.ts）
+
+整个系统的核心是 `query.ts` 里的 `queryLoop()` 函数。它的结构非常清晰：
+
+```
+用户输入
+   ↓
+上下文压缩（Snip / Micro / Collapse / Auto）
+   ↓
+调用大模型（流式 SSE Streaming）
+   ↓
+解析工具调用（tool_use blocks）
+   ↓
+执行工具（读写文件 / 最多并发 10）
+   ↓
+添加结果（tool_result → messages）
+   ↓
+还有工具调用？
+   → Yes：回到"调用大模型"
+   → No：返回结果
+```
+
+这是一个标准的 `while(true)` 循环。每一轮，模型决定是否调用工具；有工具调用则执行，执行结果再喂回给模型；直到模型不再调用任何工具，循环结束。
+
+**核心思想：让 AI 自己形成"思考 → 行动"的闭环，而不是每一步都等人来推进。**
+
+这个循环本身就是 Harness Engineering 中"稳定执行任务"的最基础实现。
+
+---
+
+## 二、工具系统设计（tools.ts）
+
+`tools.ts` 里的 `getAllBaseTools()` 列出了所有 40+ 个内置工具：
+
+```typescript
+export function getAllBaseTools(): Tools {
+  return [
+    AgentTool,         // 子 Agent 生成
+    TaskOutputTool,    // 任务输出
+    BashTool,          // 执行终端命令
+    ...(hasEmbeddedSearchTools() ? [GlobTool, GrepTool] : []),
+    FileReadTool,      // 读文件
+    FileEditTool,      // 编辑文件
+    FileWriteTool,     // 写文件
+    NotebookEditTool,  // 编辑 Notebook
+    WebFetchTool,      // 网络请求
+    WebSearchTool,     // 网络搜索
+    TodoWriteTool,     // 待办事项
+    SkillTool,         // 技能调用
+    EnterPlanModeTool, // 进入规划模式
+    // ...
+  ]
+}
+```
+
+这些工具覆盖了一个编程助手所需的几乎所有操作：读写文件、终端执行、联网搜索、子 Agent 调度。
+
+### 读写分离与并发执行
+
+`toolOrchestration.ts` 里解决了一个关键问题：**读操作和写操作能不能同时跑？**
+
+答案是：读操作可以并发（默认最多 10 个），写操作必须排队等待。
+
+核心逻辑是 `partitionToolCalls()`——把工具调用分成两批：
+- **读工具**（`isConcurrencySafe = true`）：可以同时并发执行
+- **写工具**：遇到写操作就必须等前面都完成，串行执行
+
+这个设计让文件读取类操作快很多，同时避免写冲突。
+
+---
+
+## 三、System Prompt 的缓存分裂
+
+Anthropic API 支持 Prompt Cache：如果每次发给模型的系统提示词前半部分不变，API 会缓存复用，显著节省成本。
+
+Claude Code 在 `constants/prompts.ts` 里把系统提示词用 `DYNAMIC_BOUNDARY` 分成两段：
+
+**静态部分**（角色定义、行为规范、工具说明等）
+- 全球数百万用户共享同一份缓存
+- 每次请求不变，直接命中缓存
+
+**动态部分**（当前时间、Git 状态、CLAUDE.md 配置等）
+- 每个用户、每次对话各不相同
+- 拼接在静态部分之后，不影响缓存命中
+
+这个设计让 Claude Code 在每一轮对话中都能最大化利用 Prompt Cache，大幅降低 API 成本。
+
+---
+
+## 四、内容检索：Agentic Search vs RAG
+
+现在主流的文档检索方案是 RAG（检索增强生成）——先把文档 Embedding 存入向量数据库，查询时检索最相关内容再给模型。
+
+**但 Claude Code 完全不用 RAG。**
+
+它用的是更直接的 **Agentic Search**——不预处理文档，让 AI 自己用 Grep 在文件系统里搜索。
+
+Claude Code 创始人 Boris Cherny 试过 RAG，但发现让 AI 自己决定怎么找信息效果更好：
+
+```bash
+# memdir/memdir.ts 里的记忆搜索
+const memSearch = `grep -rn "<search term>" $(autoMemDir) --include="*.md"`
+const transcriptSearch = `grep -rn "<search term>" $(projectDir) --include="*.jsonl"`
+```
+
+| 方案 | 特点 |
+|------|------|
+| RAG | 预先把所有资料都整理好喂给它 |
+| Agentic Search | 直接给 AI 文件库，让它自己去找 |
+
+随着模型能力越来越强，很多过去需要预处理的工作可以直接交给 AI 自己完成。
+
+---
+
+## 五、三层记忆架构
+
+Claude Code 把记忆分成三层，用不同温度来管理：
+
+### 第一层：MEMORY.md（热数据，常驻加载）
+
+每次对话都会加载，像一本书的目录——不存详细内容，只记指针和摘要。
+
+限制：最多 **200 行**，**25KB**。超出时截断（行数和字节数双保险），并在上下文里加 WARNING 告知 AI 内容被截断。
+
+### 第二层：话题文件（温数据，按需加载）
+
+编码偏好、架构决策、近期细节等存在独立话题文件里。每次对话时，Sonnet 小模型从中挑选最多 **5 个**相关文件加载。
+
+选文件的 Prompt 有一个关键规则：
+
+> 如果最近用过的工具有对应文档，**不要**选它们（工具文档应该已经知道了）。**要选**那些包含警告、坑点、已知问题的文件——主动使用中，正是最需要这些信息的时候。
+
+**注意：记忆不会自动更新。** AI 使用记忆，但不会自己把新经验写回去，需要人工管理或显式触发。
+
+### 第三层：历史对话（冷数据，Grep 搜索）
+
+早期历史对话存成 `.jsonl` 文件，需要时用 Grep 关键词搜索找回。
+
+---
+
+## 六、五级上下文压缩
+
+随着对话越来越长，上下文会撑满窗口。Claude Code 设计了 **5 级压缩管道**（`compact/`），像漏斗一样层层过滤：
+
+| 级别 | 名称 | 触发时机 | 操作 |
+|------|------|---------|------|
+| 1 | **Snip 剪裁** | 最轻量 | 保留工具调用结构，丢弃结果内容 |
+| 2 | **Microcompact 微压缩** | 工具结果过大 | 大型结果截断保存到磁盘 |
+| 3 | **Context Collapse 折叠** | 中间工具调用过多 | 折叠中间轮次，只保留关键信息 |
+| 4 | **Autocompact 自动压缩** | 上下文接近上限 | 触发全量重新压缩 |
+| 5 | **Reactive Compact 应急压缩** | API 返回 413 错误 | 紧急触发压缩 |
+
+### 断路器机制
+
+2026-03-10 的统计数据发现：全球有 **1279 个会话**连续压缩失败 50 次以上，最极端的一个失败了 **3272 次**，全球每天浪费约 **25 万次** API 调用。
+
+解决方案是在 `autoCompact.ts` 里加了一个断路器：
+
+```typescript
+// 2026-03-10: 1,279 sessions had 50+ consecutive failures (up to 3,272)
+// wasting ~250K API calls/day globally.
+const MAX_CONSECUTIVE_AUTOCOMPACT_FAILURES = 3
+```
+
+连续失败 3 次就自动停下来，不再无限重试浪费 API。
+
+---
+
+## 七、YOLO 模式背后的安全设计
+
+开启 `--dangerously-skip-permissions`（YOLO 模式）后，看似完全不设防——实际上背后还有一个独立的 AI 分类器在审查每一次操作：
+
+```typescript
+// utils/permissions/yoloClassifier.ts
+export async function classifyYoloAction(
+  toolName: string,
+  toolInput: Record<string, unknown>,
+): Promise<'allow' | 'soft_deny' | 'hard_deny'> {
+  // allow：安全，直接放行
+  // soft_deny：有风险，降级成需要手动确认
+  // hard_deny：直接拦截，没得商量
+}
+```
+
+权限系统有多个检查点，任何一个都可能拦截操作：
+1. 运行模式（Plan / Auto / Bypass）
+2. Hooks 里的自定义规则
+3. AI 分类器（YOLO 模式下仍然生效）
+4. Bash 命令危险模式匹配（如 `rm -rf`）
+5. 配置文件规则
+
+**结论：YOLO 模式只是减少了人工确认，不是关闭了安全系统。**
+
+---
+
+## 八、Feature Flags 暴露的产品路线图
+
+源码里的 Feature Flags 泄露了几个还未正式发布的功能方向：
+
+### KAIROS — 长期助手模式
+AI 可以 24 小时不间断持续运行，自动记录工作日志。还有一个 **AutoDream 自动做梦**功能——在系统空闲时自动整理和沉淀记忆。
+
+### COORDINATOR_MODE — 多 Agent 协作
+一个 AI 协调多个 AI 分工协作，工作流分四个阶段：
+
+| 阶段 | 执行者 | 目标 |
+|------|--------|------|
+| Research | Workers（并行） | 调查代码库、找文件、理解问题 |
+| Synthesis | Coordinator | 阅读发现、制定实施方案 |
+| Implementation | Workers | 按方案执行修改、提交代码 |
+| Review | Coordinator | 验收结果 |
+
+Agent 之间通过 `utils/mailbox.ts` 的 **Mailbox**（基于文件的消息队列）通信。
+
+### VOICE_MODE 和 WEB_BROWSER_TOOL
+语音交互和浏览器工具，处于开发阶段。
+
+---
+
+## 九、反蒸馏机制
+
+有竞争对手可能通过监控 API 流量来"蒸馏" Claude Code 的能力——观察它调用了哪些工具、怎么调用，然后用这些数据训练自己的模型。
+
+Anthropic 的反制手段：**在 API 请求里直接注入假工具定义。**
+
+```typescript
+// services/api/claude.ts
+// Anti-distillation: send fake tools
+if (feature('ANTI_DISTILLATION_CC')
+  && process.env.CLAUDE_CODE_ENTRYPOINT === 'cli'
+  && shouldIncludeFirstPartyOnlyBetas()) {
+  result.anti_distillation = ['fake_tools']
+}
+```
+
+竞争对手的模型如果拿到这些掺了假工具的数据去训练，反而会越训越差——是一种反向激励机制。
+
+注意：这只影响 CLI 行为，通过 SDK 接入的用户不受影响。
+
+---
+
+## 十、工程细节：硬编码提示与速度优化
+
+### 硬编码提示
+
+以前 Claude 经常在写文件前先执行 `mkdir` 检查目录是否存在，浪费一轮对话。工程师直接在 `MEMDIR.ts` 里硬编码了一行提示告诉 AI：
+
+```typescript
+// Shipped because Claude was burning a round calling
+// `ls`/`mkdir -p` before writing.
+export const DIR_EXISTS_GUIDANCE =
+  'This directory already exists — write to it directly with the Write tool ' +
+  '(do not run mkdir or check for its existence).'
+```
+
+这是工程决策的典型例子：用一行硬编码彻底消灭一个反复出现的低效行为，而不是依赖模型自己学会。
+
+### 极致速度优化
+
+Claude Code 对启动速度有近乎偏执的追求：
+- 所有模块**并行加载**，不串行等待
+- **早期输入捕获**：在模型加载期间先把用户的键盘输入缓存下来，加载完成立即释放，让用户感觉"按下回车就有反应"
+
+---
+
+## 从 Claude Code 学到什么
+
+这份源码给 Agent 系统工程设计提供了几个直接可借鉴的模式：
+
+1. **主循环要简单**：`while(true)` + 工具执行 + 结果回填，逻辑越清晰越稳定
+2. **读写分离是标配**：并发读、串行写，这不是优化项，是正确性的基本要求
+3. **记忆要分温度管理**：常驻热数据 + 按需加载温数据 + 冷存储检索，三层各司其职
+4. **上下文压缩要有层级**：从最轻量的剪裁到全量重压，按需升级，加断路器防止失控
+5. **安全不依赖单点**：多个检查层叠加，即使最外层关闭，里面还有守卫
+6. **硬编码解决重复性问题**：发现 AI 反复犯同一个低效行为，就用代码直接拦截，不要等模型自己学
+
+最后一点，对构建自己的 Harness 系统特别有价值：**你对自己系统里 AI 的典型错误越了解，就越能用工程手段提前消除它们。**

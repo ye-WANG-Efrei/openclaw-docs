@@ -4,6 +4,108 @@
 
 ---
 
+## 视频 → 文章 → 上线 完整工作流
+
+> 这是最常用的内容更新路径：录制或下载一段视频，让 AI 分析内容，自动生成双语文章，部署到线上。
+> 换电脑或重新克隆仓库后，按此流程同样适用。
+
+### 前置依赖（一次性安装）
+
+| 工具 | 安装命令 | 用途 |
+|------|---------|------|
+| Node.js 18+ | 官网下载 | 构建文档站 |
+| Wrangler CLI | `npm install -g wrangler` | 部署到 Cloudflare |
+| ffmpeg | `winget install ffmpeg` | 提取视频帧供 AI 分析 |
+| Claude Code | `npm install -g @anthropic-ai/claude-code` | AI 分析 + 生成文章 |
+
+安装 ffmpeg 后需重启终端（或新开 shell）使 PATH 生效。  
+若在 Claude Code 的 bash 会话中，用完整路径调用：  
+`~/.../WinGet/Packages/Gyan.FFmpeg_.../ffmpeg-8.1-full_build/bin/ffmpeg.exe`
+
+### 第一步：把视频放进 `video/` 目录
+
+```
+Openclaw-web/
+└── video/
+    └── your-video.mp4   ← 把视频文件放这里
+```
+
+文件名无要求，支持 `.mp4`、`.MP4`、`.mov` 等常见格式。
+
+### 第二步：在 Claude Code 中发出指令
+
+打开 Claude Code，切换到 `D:/Openclaw-web` 目录，输入：
+
+```
+我在 video/ 里上传了新视频，请分析内容并生成文章上传到网站
+```
+
+Claude Code 会自动：
+1. 用 ffmpeg 提取关键帧（每 30 秒一帧）
+2. 读取帧图像，理解视频主题和内容
+3. 对比现有文档，确定新文章的角度
+4. 生成中英文双语 MDX 文章
+5. 更新导航配置（`navigation.zh.json` / `navigation.json`）
+
+### 第三步：确认生成的文章
+
+文章会出现在：
+- 中文：`demo-docs-site/content/docs-zh/guide/<slug>.mdx`
+- 英文：`demo-docs-site/content/docs/guide/<slug>.mdx`
+
+本地预览（可选）：
+
+```bash
+cd demo-docs-site
+npm install   # 首次或依赖变化时
+npm run dev
+# 访问 http://localhost:3000
+```
+
+### 第四步：部署上线
+
+```powershell
+# 方式一：一键脚本（推荐）
+./deploy.ps1
+
+# 方式二：手动
+cd demo-docs-site
+npm run build
+npx wrangler pages deploy out/ --project-name openclaw-docs --commit-dirty=true --branch=main
+```
+
+部署约 30 秒完成，访问 `https://openclaw.aiedi.cn/doc` 验证。
+
+### 换电脑后的完整流程
+
+```bash
+# 1. 克隆仓库
+git clone <repo-url>
+cd Openclaw-web
+
+# 2. 安装工具（见上方"前置依赖"）
+winget install ffmpeg
+npm install -g wrangler
+
+# 3. 登录 Cloudflare（一次性）
+npx wrangler login
+# 使用账号 ye.wang.20182131@efrei.net
+
+# 4. 安装 Node 依赖
+cd demo-docs-site && npm install && cd ..
+
+# 5. 把视频放进 video/ 目录，在 Claude Code 里发指令
+# （同上方第二步）
+
+# 6. 部署
+./deploy.ps1
+```
+
+> **注意**：`video/` 目录下的视频文件不提交 Git（已在 `.gitignore` 中忽略或体积过大）。
+> 换电脑后需重新把视频文件复制到 `video/` 目录，或重新下载。
+
+---
+
 ## 目录结构
 
 ```

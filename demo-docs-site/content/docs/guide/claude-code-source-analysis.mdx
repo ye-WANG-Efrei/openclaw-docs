@@ -1,0 +1,291 @@
+---
+title: Claude Code Source Code Analysis
+description: A deep dive into Claude Code's source code — Agent loop, tool system, memory architecture, context compression, and security design in a production-grade AI coding tool
+order: 9
+---
+
+One of the best ways to understand Harness Engineering is to look directly at how a production AI agent system is actually designed.
+
+Claude Code is one of the most mature AI coding tools available today. Its source code is publicly distributed as an npm package (`@anthropic-ai/claude-code`, ~59.8MB). Reading this code shows clearly how a production-grade Agent system makes engineering decisions at every critical design point.
+
+This article breaks down the most important ones.
+
+---
+
+## 1. The Agent Main Loop (query.ts)
+
+The entire system's core is the `queryLoop()` function in `query.ts`. Its structure is straightforward:
+
+```
+User input
+   ↓
+Context compression (Snip / Micro / Collapse / Auto)
+   ↓
+Call the model (streaming SSE)
+   ↓
+Parse tool calls (tool_use blocks)
+   ↓
+Execute tools (file read/write / up to 10 concurrent)
+   ↓
+Add results (tool_result → messages)
+   ↓
+More tool calls?
+   → Yes: back to "call the model"
+   → No: return result
+```
+
+This is a standard `while(true)` loop. Each iteration, the model decides whether to call a tool. If it does, the tool runs and the result gets fed back to the model. This continues until the model stops calling tools.
+
+**Core idea: let AI form its own "think → act" closed loop, without waiting for a human to push each step.**
+
+This loop is the most basic implementation of "stable task execution" in Harness Engineering.
+
+---
+
+## 2. Tool System Design (tools.ts)
+
+`getAllBaseTools()` in `tools.ts` lists all 40+ built-in tools:
+
+```typescript
+export function getAllBaseTools(): Tools {
+  return [
+    AgentTool,         // spawn sub-Agents
+    TaskOutputTool,    // task output
+    BashTool,          // execute terminal commands
+    ...(hasEmbeddedSearchTools() ? [GlobTool, GrepTool] : []),
+    FileReadTool,      // read files
+    FileEditTool,      // edit files
+    FileWriteTool,     // write files
+    NotebookEditTool,  // edit Notebooks
+    WebFetchTool,      // HTTP requests
+    WebSearchTool,     // web search
+    TodoWriteTool,     // todo management
+    SkillTool,         // invoke skills
+    EnterPlanModeTool, // enter planning mode
+    // ...
+  ]
+}
+```
+
+These tools cover nearly every operation a coding assistant needs: file read/write, terminal execution, web search, and sub-Agent dispatch.
+
+### Read/Write Separation and Concurrent Execution
+
+`toolOrchestration.ts` solves a key question: **can read and write operations run simultaneously?**
+
+The answer: read operations can run concurrently (up to 10 by default), write operations must queue and wait.
+
+The core logic is `partitionToolCalls()` — splitting tool calls into two batches:
+- **Read tools** (`isConcurrencySafe = true`): can execute in parallel
+- **Write tools**: must wait for all prior operations to complete, then execute serially
+
+This design makes file reading much faster while preventing write conflicts.
+
+---
+
+## 3. System Prompt Cache Splitting
+
+The Anthropic API supports Prompt Cache: if the first part of the system prompt sent to the model stays the same across requests, the API caches and reuses it, significantly reducing cost.
+
+Claude Code splits the system prompt in `constants/prompts.ts` using `DYNAMIC_BOUNDARY`:
+
+**Static portion** (role definition, behavioral rules, tool descriptions, etc.)
+- Shared across millions of users globally
+- Never changes per request — always hits cache
+
+**Dynamic portion** (current time, git status, CLAUDE.md config, etc.)
+- Different for each user and each conversation
+- Appended after the static portion, doesn't affect cache hits
+
+This design maximizes Prompt Cache utilization on every request, dramatically reducing API cost.
+
+---
+
+## 4. Content Retrieval: Agentic Search vs RAG
+
+The mainstream retrieval approach today is RAG (Retrieval-Augmented Generation) — pre-embed documents into a vector database, then retrieve the most relevant content at query time.
+
+**Claude Code doesn't use RAG at all.**
+
+Instead it uses **Agentic Search** — no document preprocessing, AI uses Grep to search the filesystem directly:
+
+```bash
+# From memdir/memdir.ts
+const memSearch = `grep -rn "<search term>" $(autoMemDir) --include="*.md"`
+const transcriptSearch = `grep -rn "<search term>" $(projectDir) --include="*.jsonl"`
+```
+
+Claude Code's creator Boris Cherny tried RAG but found letting AI self-search works better:
+
+| Approach | Characteristic |
+|----------|---------------|
+| RAG | Pre-organize all material and feed it to the model |
+| Agentic Search | Give AI the file library and let it find things itself |
+
+As model capability improves, many tasks that previously required preprocessing can be handed directly to AI.
+
+---
+
+## 5. Three-Layer Memory Architecture
+
+Claude Code divides memory into three layers, each managed at a different "temperature":
+
+### Layer 1: MEMORY.md (Hot data, always loaded)
+
+Loaded in every conversation — like a book's table of contents. Stores pointers and summaries, not detailed content.
+
+Limits: max **200 lines**, **25KB**. When exceeded, truncation applies (both line count and byte count as double safeguards), with a WARNING added to the context telling AI the content was cut.
+
+### Layer 2: Topic files (Warm data, loaded on demand)
+
+Coding preferences, architectural decisions, recent details — stored in separate topic files. Each conversation, a Sonnet small model selects up to **5 relevant files** to load.
+
+The file selection prompt has a key rule:
+
+> If recently-used tools are listed, do **NOT** select docs for those tools. **Do** select memories containing warnings, gotchas, or known issues — active use is exactly when those matter.
+
+**Important: memory doesn't auto-update.** AI uses memory but won't write new experience back on its own. This requires manual management or explicit triggering.
+
+### Layer 3: Historical conversations (Cold data, Grep search)
+
+Early conversation history stored as `.jsonl` files. Retrieved with Grep keyword search when needed.
+
+---
+
+## 6. Five-Level Context Compression
+
+As conversations grow longer, context fills the window. Claude Code implements a **5-level compression pipeline** (`compact/`), filtering like a funnel:
+
+| Level | Name | Trigger | Operation |
+|-------|------|---------|-----------|
+| 1 | **Snip** | Lightest | Keeps tool call structure, discards result content |
+| 2 | **Microcompact** | Tool results too large | Truncates large results, saves to disk |
+| 3 | **Context Collapse** | Too many intermediate tool calls | Collapses middle turns, keeps key info |
+| 4 | **Autocompact** | Context approaches limit | Triggers full recompression |
+| 5 | **Reactive Compact** | API returns 413 error | Emergency compression |
+
+### Circuit Breaker
+
+Stats from 2026-03-10 found: **1,279 sessions** had 50+ consecutive compression failures globally. The worst single session failed **3,272 times** in retries, wasting roughly **250K API calls per day** globally.
+
+The fix: a circuit breaker in `autoCompact.ts`:
+
+```typescript
+// 2026-03-10: 1,279 sessions had 50+ consecutive failures (up to 3,272)
+// wasting ~250K API calls/day globally.
+const MAX_CONSECUTIVE_AUTOCOMPACT_FAILURES = 3
+```
+
+After 3 consecutive failures, auto-stop. No more infinite retries.
+
+---
+
+## 7. The Security Design Behind YOLO Mode
+
+Enabling `--dangerously-skip-permissions` (YOLO mode) looks completely unguarded — but there's still an independent AI classifier reviewing every single operation:
+
+```typescript
+// utils/permissions/yoloClassifier.ts
+export async function classifyYoloAction(
+  toolName: string,
+  toolInput: Record<string, unknown>,
+): Promise<'allow' | 'soft_deny' | 'hard_deny'> {
+  // allow: safe, execute immediately
+  // soft_deny: risky, downgrade to require manual confirmation
+  // hard_deny: blocked outright, no override
+}
+```
+
+The permission system has multiple checkpoints — any one can block an operation:
+1. Run mode (Plan / Auto / Bypass)
+2. Custom rules in Hooks
+3. AI classifier (still active in YOLO mode)
+4. Bash command dangerous pattern matching (`rm -rf`, etc.)
+5. Config file rules
+
+**Conclusion: YOLO mode reduces manual confirmation, it does not disable the security system.**
+
+---
+
+## 8. Feature Flags Revealing the Product Roadmap
+
+Feature flags in the source code expose several upcoming features not yet officially released:
+
+### KAIROS — Long-Term Assistant Mode
+AI runs uninterrupted 24/7, automatically logging work. There's also an **AutoDream** function — automatically consolidating and sedimenting memories during idle periods.
+
+### COORDINATOR_MODE — Multi-Agent Collaboration
+One AI coordinating multiple AIs in parallel. Four-stage workflow:
+
+| Stage | Executor | Goal |
+|-------|----------|------|
+| Research | Workers (parallel) | Investigate codebase, find files, understand the problem |
+| Synthesis | Coordinator | Read findings, formulate implementation plan |
+| Implementation | Workers | Execute changes per plan, commit code |
+| Review | Coordinator | Validate results |
+
+Agents communicate through **Mailbox** in `utils/mailbox.ts` — a file-based message queue.
+
+### VOICE_MODE and WEB_BROWSER_TOOL
+Voice interaction and browser tool — currently in development.
+
+---
+
+## 9. Anti-Distillation Mechanism
+
+Competitors might monitor API traffic to "distill" Claude Code's capabilities — observing which tools it calls and how, then using that data to train their own models.
+
+Anthropic's countermeasure: **inject fake tool definitions directly into API requests.**
+
+```typescript
+// services/api/claude.ts
+// Anti-distillation: send fake tools
+if (feature('ANTI_DISTILLATION_CC')
+  && process.env.CLAUDE_CODE_ENTRYPOINT === 'cli'
+  && shouldIncludeFirstPartyOnlyBetas()) {
+  result.anti_distillation = ['fake_tools']
+}
+```
+
+If a competitor's model trains on data contaminated with fake tools, it actually gets worse — a reverse-incentive mechanism.
+
+Note: this only affects CLI behavior. SDK access is unaffected.
+
+---
+
+## 10. Engineering Details: Hardcoded Hints and Speed Obsession
+
+### Hardcoded Hints
+
+Claude used to waste a round trip calling `mkdir` to check if a directory existed before writing. Engineers hardcoded a single hint in `MEMDIR.ts`:
+
+```typescript
+// Shipped because Claude was burning a round calling
+// `ls`/`mkdir -p` before writing.
+export const DIR_EXISTS_GUIDANCE =
+  'This directory already exists — write to it directly with the Write tool ' +
+  '(do not run mkdir or check for its existence).'
+```
+
+This is engineering judgment at its clearest: use one line of hardcoded guidance to eliminate a recurring inefficiency rather than waiting for the model to learn on its own.
+
+### Speed Obsession
+
+Claude Code has a near-obsessive focus on startup time:
+- All modules load **in parallel** — no serial waiting
+- **Early input capture**: keystrokes are buffered while the model loads, then released immediately when ready, making the user feel "I get a response the moment I press enter"
+
+---
+
+## What to Take from Claude Code
+
+This source code provides several directly transferable patterns for building your own Agent systems:
+
+1. **Keep the main loop simple**: `while(true)` + tool execution + result feed-back. The clearer the logic, the more stable the behavior.
+2. **Read/write separation is table stakes**: concurrent reads, serial writes — this is a correctness requirement, not an optimization.
+3. **Memory needs temperature management**: hot always-loaded + warm on-demand + cold searchable. Each layer has its role.
+4. **Context compression needs levels**: from lightweight snipping to full recompression, escalate as needed. Add a circuit breaker to prevent runaway loops.
+5. **Security doesn't rely on a single checkpoint**: layer multiple guards. Even if the outer layer is disabled, inner guards remain.
+6. **Hardcode solutions to repetitive problems**: when you identify a recurring inefficiency in how AI behaves in your system, fix it with code — don't wait for the model to improve.
+
+That last point is especially valuable for building your own Harness system: **the better you understand the typical failure modes in your system, the more you can preemptively eliminate them through engineering.**

@@ -51,6 +51,18 @@
           "slug": "guide/harness-engineering",
           "description": "Engineer OpenClaw into a sustainable, production-ready AI assistant system.",
           "order": 7
+        },
+        {
+          "title": "Encoding Expert Knowledge into AI",
+          "slug": "guide/expert-knowledge-harness",
+          "description": "A practitioner's view on Harness Engineering — encode your expertise into AI so your Agent becomes a professional extension of yourself.",
+          "order": 8
+        },
+        {
+          "title": "Claude Code Source Analysis",
+          "slug": "guide/claude-code-source-analysis",
+          "description": "A deep dive into Claude Code's source — Agent loop, tool system, three-layer memory, five-level context compression, and security design.",
+          "order": 9
         }
       ]
     }

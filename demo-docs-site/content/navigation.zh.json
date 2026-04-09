@@ -51,6 +51,18 @@
           "slug": "guide/harness-engineering",
           "description": "将 OpenClaw 工程化落地，构建可持续迭代、稳定运行的 AI 助手体系。",
           "order": 7
+        },
+        {
+          "title": "把专家经验装进 AI",
+          "slug": "guide/expert-knowledge-harness",
+          "description": "从创业者视角看 Harness Engineering——把业务知识与专家经验系统性地沉淀进 AI，让 Agent 成为你的专业分身。",
+          "order": 8
+        },
+        {
+          "title": "Claude Code 源码拆解",
+          "slug": "guide/claude-code-source-analysis",
+          "description": "从 Claude Code 源码出发，深入理解 Agent 循环、工具系统、三层记忆、五级上下文压缩与安全设计。",
+          "order": 9
         }
       ]
     }

@@ -4,6 +4,22 @@ compatibility_date = "2024-01-01"
 account_id = "652120b1b0b9a5755d31e219d1b6c851"
 
 routes = [
-  { pattern = "openclaw.aiedi.cn/doc*", zone_name = "aiedi.cn" },
+  { pattern = "openclaw.aiedi.cn/doc*",              zone_name = "aiedi.cn" },
+  { pattern = "openclaw.aiedi.cn/api/annotations*",  zone_name = "aiedi.cn" },
+  { pattern = "openclaw.aiedi.cn/api/auth*",         zone_name = "aiedi.cn" },
+  { pattern = "openclaw.aiedi.cn/api/comments*",     zone_name = "aiedi.cn" },
+  { pattern = "openclaw.aiedi.cn/api/stats*",        zone_name = "aiedi.cn" },
   { pattern = "aiedi.cn/7693314d39083a420bd8e8bfca7a2e63.txt", zone_name = "aiedi.cn" }
 ]
+
+# KV namespace for storing annotations.
+# To create it, run:  npx wrangler kv:namespace create "ANNOTATIONS_KV"
+# Then replace the id below with the one returned by that command.
+[[kv_namespaces]]
+binding = "ANNOTATIONS_KV"
+id = "89cae4f841a34886bb18de76447ddec9"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "openclaw-comments"
+database_id = "34cae24e-a293-4705-8d23-fd74f6a34164"
